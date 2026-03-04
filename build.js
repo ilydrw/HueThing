@@ -1,6 +1,7 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+import AdmZip from 'adm-zip'
 
 const ESM_BANNER = `// ESM shims for Node.js built-in modules
 import { createRequire as DeskThingCreateRequire } from 'module';
@@ -101,4 +102,10 @@ if (fs.existsSync(srcIconsDir)) {
   }
 }
 
-console.log('Build complete! Zip the dist/ folder and load into DeskThing.')
+// Zip the dist folder into huething.zip
+console.log('Zipping dist folder into huething.zip...')
+const zip = new AdmZip()
+zip.addLocalFolder(path.resolve('dist'))
+zip.writeZip(path.resolve('huething.zip'))
+
+console.log('Build complete! huething.zip has been successfully generated. You can now load it into DeskThing.')
