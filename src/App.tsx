@@ -8,6 +8,7 @@ import PairingFlow from './components/PairingFlow'
 import ColorPicker from './components/ColorPicker'
 import { HueIcon } from './components/HueIcons'
 import { Logo } from './components/Logo'
+import SplashScreen from './components/SplashScreen'
 
 type View = 'dashboard' | 'lights' | 'scenes' | 'pairing'
 
@@ -28,6 +29,7 @@ export default function App() {
   const [pickingColorLight, setPickingColorLight] = useState<SimplifiedLight | null>(null)
   const [knobBrightness, setKnobBrightness] = useState<number | null>(null)
   const [themeColor, setThemeColor] = useState<string>('#bf5af2')
+  const [isSpawning, setIsSpawning] = useState<boolean>(true)
   const knobTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
   // Refs to avoid closure staleness in event listeners
@@ -151,8 +153,9 @@ export default function App() {
   const needsPairing = !hueState.paired && !hueState.connected
 
   return (
-    <div className="app-container" style={{ '--accent-hue': themeColor } as React.CSSProperties}>
-      {/* Header */}
+    <>
+      <div className="app-container" style={{ '--accent-hue': themeColor } as React.CSSProperties}>
+        {/* Header */}
       <header className="app-header">
         <div className="header-left">
           <Logo />
@@ -268,6 +271,9 @@ export default function App() {
           onClose={() => setPickingColorLight(null)}
         />
       )}
-    </div>
+      </div>
+
+      {isSpawning && <SplashScreen onComplete={() => setIsSpawning(false)} />}
+    </>
   )
 }

@@ -417,8 +417,8 @@ h1, h2, h3 {
   color: #fff;
   border: none;
   border-radius: var(--radius-xl);
-  padding: 24px 48px; /* Massive Padding */
-  font-size: 32px; /* Massive Font Size */
+  padding: 16px 32px; /* Better padding for 480px screen */
+  font-size: 24px; /* Better Font Size */
   font-weight: 700;
   cursor: pointer;
   transition: var(--transition-smooth);
@@ -444,6 +444,234 @@ h1, h2, h3 {
 }
 .action-btn.secondary:active {
   background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Splash Screen (Startup Animation) ── */
+.splash-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg-app);
+  z-index: 10000;
+  display: block;
+  transition: opacity 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.splash-overlay.curtain-pull {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-logo-container {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: top left;
+}
+
+.splash-logo-container.phase-appear {
+  animation: logoManifest 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.splash-logo-container.phase-glide,
+.splash-logo-container.phase-curtain {
+  animation: logoGlide 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes logoManifest {
+  0% {
+    opacity: 0;
+    transform: translate(calc(50vw - 50px), calc(50vh - 32px)) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(calc(50vw - 50px), calc(50vh - 32px)) scale(1.5);
+  }
+}
+
+@keyframes logoGlide {
+  0% {
+    transform: translate(calc(50vw - 50px), calc(50vh - 32px)) scale(1.5);
+  }
+  50% {
+    /* Slight arc bounce during transition */
+    transform: translate(calc(25vw), calc(35vh)) scale(1.2);
+  }
+  100% {
+    /* Land right in the app-header left bounds (32px padding, centered vertically inside 90px header height minus 64px logo height  = 13px) */
+    transform: translate(32px, 13px) scale(1);
+  }
+}
+
+/* ── Pairing Orbs Loader ── */
+.orb-spinner {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb-ring {
+  position: absolute;
+  top: -15px; left: -15px; right: -15px; bottom: -15px;
+  animation: orbSpin 2s linear infinite;
+  pointer-events: none;
+}
+
+.orb-spinner.success .orb-ring {
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.orb {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-hue, #bf5af2);
+  border-radius: 50%;
+  box-shadow: 0 0 16px var(--accent-hue, #bf5af2);
+}
+
+.orb:nth-child(1) { top: 0; left: 50%; transform: translate(-50%, -50%); }
+.orb:nth-child(2) { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+.orb:nth-child(3) { left: 0; top: 50%; transform: translate(-50%, -50%); }
+.orb:nth-child(4) { right: 0; top: 50%; transform: translate(50%, -50%); }
+
+@keyframes orbSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.success-checkmark {
+  position: absolute;
+  bottom: -10px; right: -10px;
+  width: 48px; height: 48px;
+  background: var(--accent-green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 28px;
+  font-weight: bold;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 20px var(--accent-green);
+  z-index: 10;
+}
+
+.orb-spinner.success .success-checkmark {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ── Keyboard (Massive IP Entry) ── */
+.kb-fullscreen {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg-app);
+  z-index: 5000;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.kb-input-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.kb-input-display {
+  display: flex;
+  align-items: center;
+  background: var(--bg-surface);
+  border: 2px solid rgba(255,255,255,0.1);
+  padding: 16px 32px;
+  border-radius: var(--radius-lg);
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  min-width: 400px;
+  justify-content: center;
+  position: relative;
+}
+
+.kb-prefix {
+  color: var(--accent-hue);
+  margin-right: 12px;
+}
+
+.kb-main-value {
+  color: #fff;
+}
+
+.kb-main-value.placeholder {
+  color: rgba(255,255,255,0.3);
+}
+
+.kb-clear-btn {
+  position: absolute;
+  right: 16px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 32px;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.kb-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  flex: 1;
+}
+
+.kb-key {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 32px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kb-key:active {
+  background: var(--accent-hue);
+  transform: scale(0.95);
+}
+
+.kb-prefix-key {
+  font-size: 24px;
+  grid-column: span 2;
+}
+
+.kb-key-back {
+  background: rgba(255, 69, 58, 0.2);
+  color: #ff453a;
+  grid-column: span 2;
+}
+
+.kb-done-key {
+  grid-column: span 5;
+  background: var(--accent-hue);
+  color: #fff;
+  font-size: 28px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.kb-done-key:disabled {
+  opacity: 0.3;
+  background: rgba(255,255,255,0.1);
 }
 
 /* ── Color Picker Overlay ── */

@@ -3,12 +3,12 @@
   "isWebApp": true,
   "requires": [""],
   "label": "HueThing",
-  "icon": "icon.svg",
+  "icon": "icon.png",
   "icons": [
     {
-      "src": "icon.svg",
+      "src": "icon.png",
       "sizes": "192x192 512x512 any",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],

@@ -10,7 +10,7 @@ interface PairingFlowProps {
   onPaired: () => void
 }
 
-type PairingStep = 'discover' | 'press-button' | 'success' | 'error'
+type PairingStep = 'discover' | 'manual-ip' | 'press-button' | 'success' | 'error'
 
 export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
   const [step, setStep] = useState<PairingStep>('discover')
@@ -20,7 +20,6 @@ export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
   const [error, setError] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [isPairing, setIsPairing] = useState(false)
-  const [showKeyboard, setShowKeyboard] = useState(false)
 
   // If already configured, show as success
   useEffect(() => {
@@ -116,24 +115,24 @@ export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
           {isSearching ? 'Searching...' : 'Scan for Bridges'}
         </button>
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '24px', fontWeight: 600, opacity: 0.6, letterSpacing: '2px' }}>or...</div>
-        <button className="action-btn secondary" onClick={() => setShowKeyboard(true)}>
+        <button className="action-btn secondary" onClick={() => setStep('manual-ip')}>
           Enter IP Manually
         </button>
       </div>
-
-      {showKeyboard && (
-        <Keyboard 
-          initialValue={manualIp}
-          onInput={setManualIp}
-          onDone={() => {
-            if (manualIp) {
-              handleStartPairing(manualIp)
-              setShowKeyboard(false)
-            }
-          }}
-        />
-      )}
     </div>
+  )
+
+  const renderManualIp = () => (
+    <Keyboard 
+      initialValue={manualIp}
+      onInput={setManualIp}
+      onDone={() => {
+        if (manualIp) {
+          handleStartPairing(manualIp)
+        }
+      }}
+      onCancel={() => setStep('discover')}
+    />
   )
 
   const renderPressButton = () => (
@@ -143,11 +142,19 @@ export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
         <p style={{ fontWeight: 300 }}>Press the link button on your Hue Bridge to complete the setup.</p>
       </div>
       <div className="pairing-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-        <div
-          className="pairing-bridge-icon"
-          style={{ animation: 'float 3s ease-in-out infinite', background: 'var(--bg-glass-heavy)', padding: '20px', borderRadius: '50%', border: '2px solid var(--border-glow)' }}
-        >
-          <img src="/hue-bridge.svg" alt="Hue Bridge" style={{ width: '80px', height: '80px' }} />
+        <div className="orb-spinner">
+          <div className="orb-ring">
+            <div className="orb"></div>
+            <div className="orb"></div>
+            <div className="orb"></div>
+            <div className="orb"></div>
+          </div>
+          <div
+            className="pairing-bridge-icon"
+            style={{ animation: 'float 3s ease-in-out infinite', background: 'var(--bg-glass-heavy)', padding: '20px', borderRadius: '50%', border: '2px solid var(--border-glow)', zIndex: 2, position: 'relative' }}
+          >
+            <img src="/hue-bridge.svg" alt="Hue Bridge" style={{ width: '80px', height: '80px' }} />
+          </div>
         </div>
         <div style={{ marginTop: '32px', textAlign: 'center' }}>
           <p style={{ fontSize: '18px', fontWeight: '700' }}>Bridge IP: {selectedIp}</p>
@@ -171,8 +178,17 @@ export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
   const renderSuccess = () => (
     <div className="view-container fade-in">
       <div className="pairing-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <div className="pairing-bridge-icon" style={{ background: 'linear-gradient(135deg, var(--accent-green), #03251a)', padding: '24px', borderRadius: '50%', border: '2px solid var(--accent-green)', boxShadow: '0 0 40px rgba(50, 215, 75, 0.3)' }}>
-          <img src="/hue-bridge.svg" alt="Hue Bridge" style={{ width: '80px', height: '80px', filter: 'brightness(0) invert(1)' }} />
+        <div className="orb-spinner success">
+          <div className="orb-ring">
+            <div className="orb"></div>
+            <div className="orb"></div>
+            <div className="orb"></div>
+            <div className="orb"></div>
+          </div>
+          <div className="success-checkmark">✓</div>
+          <div className="pairing-bridge-icon" style={{ background: 'linear-gradient(135deg, var(--accent-green), #03251a)', padding: '24px', borderRadius: '50%', border: '2px solid var(--accent-green)', boxShadow: '0 0 40px rgba(50, 215, 75, 0.3)', zIndex: 2, position: 'relative' }}>
+            <img src="/hue-bridge.svg" alt="Hue Bridge" style={{ width: '80px', height: '80px', filter: 'brightness(0) invert(1)' }} />
+          </div>
         </div>
         <h2 style={{ fontSize: '36px', fontWeight: '900', marginTop: '32px' }}>Connected!</h2>
         <p style={{ color: 'var(--text-secondary)', marginTop: '12px', fontSize: '18px', textAlign: 'center' }}>
@@ -192,7 +208,7 @@ export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
   const renderError = () => (
     <div className="view-container fade-in">
       <div className="pairing-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <div className="pairing-bridge-icon" style={{ background: 'linear-gradient(135deg, var(--accent-red), #350a0a)', padding: '24px', borderRadius: '50%', border: '2px solid var(--accent-red)', boxShadow: '0 0 40px rgba(255, 69, 58, 0.3)' }}>
+        <div className="pairing-bridge-icon" style={{ background: 'linear-gradient(135deg, var(--accent-red), #350a0a)', padding: '24px', borderRadius: '50%', border: '2px solid var(--accent-red)', boxShadow: '0 0 40px rgba(255, 69, 58, 0.3)', zIndex: 2, position: 'relative' }}>
           <img src="/hue-bridge.svg" alt="Hue Bridge" style={{ width: '80px', height: '80px', filter: 'brightness(0) invert(1)' }} />
         </div>
         <h2 style={{ fontSize: '32px', fontWeight: '900', marginTop: '32px' }}>Connection Failed</h2>
@@ -208,6 +224,7 @@ export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
 
   switch (step) {
     case 'discover': return renderDiscover()
+    case 'manual-ip': return renderManualIp()
     case 'press-button': return renderPressButton()
     case 'success': return renderSuccess()
     case 'error': return renderError()

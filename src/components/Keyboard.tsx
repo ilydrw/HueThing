@@ -3,11 +3,12 @@ import { useState, useCallback } from 'react'
 interface KeyboardProps {
   onInput: (value: string) => void
   onDone: () => void
+  onCancel: () => void
   initialValue?: string
   placeholder?: string
 }
 
-export default function Keyboard({ onInput, onDone, initialValue = '', placeholder = '192.168.1.x' }: KeyboardProps) {
+export default function Keyboard({ onInput, onDone, onCancel, initialValue = '', placeholder = '192.168.1.x' }: KeyboardProps) {
   const [value, setValue] = useState(initialValue)
 
   const handleKey = useCallback((key: string) => {
@@ -30,8 +31,15 @@ export default function Keyboard({ onInput, onDone, initialValue = '', placehold
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '192.168.', '0', '.', 'BACK']
 
   return (
-    <div className="kb-container fade-in" style={{ touchAction: 'none' }}>
-      <div className="kb-input-header">
+    <div className="kb-fullscreen fade-in" style={{ touchAction: 'none' }}>
+      <div className="kb-input-header" style={{ position: 'relative' }}>
+        <button 
+          className="action-btn secondary" 
+          onClick={onCancel}
+          style={{ position: 'absolute', left: 0, padding: '12px 24px', fontSize: '20px' }}
+        >
+          ← Back
+        </button>
         <div className="kb-input-display">
           <span className="kb-prefix">IP:</span>
           <span className={`kb-main-value ${!value ? 'placeholder' : ''}`}>

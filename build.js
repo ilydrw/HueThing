@@ -59,10 +59,10 @@ fs.copyFileSync(
   path.resolve('public/manifest.json'),
   path.resolve('dist/manifest.json')
 )
-if (fs.existsSync('public/icon.svg')) {
+if (fs.existsSync('public/icon.png')) {
   fs.copyFileSync(
-    path.resolve('public/icon.svg'),
-    path.resolve('dist/icon.svg')
+    path.resolve('public/icon.png'),
+    path.resolve('dist/icon.png')
   )
 }
 

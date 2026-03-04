@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%" fill="none" stroke="currentColor">
+  <!-- Outer Bridge Shell -->
+  <rect x="10" y="10" width="80" height="80" rx="24" ry="24" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Outer Light Ring groove -->
+  <circle cx="50" cy="50" r="28" stroke-width="1" opacity="0.5"/>
+  
+  <!-- Central Link Button -->
+  <circle cx="50" cy="50" r="14" stroke-width="3" fill="currentColor" fill-opacity="0.1"/>
+  
+  <!-- 3 Indicator LEDs (Power, Network, Cloud) -->
+  <circle cx="50" cy="22" r="2" fill="currentColor" stroke="none"/>
+  <circle cx="28" cy="22" r="2" fill="currentColor" opacity="0.5" stroke="none"/>
+  <circle cx="72" cy="22" r="2" fill="currentColor" opacity="0.5" stroke="none"/>
+</svg>
