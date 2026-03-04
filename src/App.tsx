@@ -25,7 +25,7 @@ export default function App() {
   const [view, setView] = useState<View>('dashboard')
   const [selectedRoom, setSelectedRoom] = useState<SimplifiedRoom | null>(null)
   const [knobBrightness, setKnobBrightness] = useState<number | null>(null)
-  const [themeColor, setThemeColor] = useState<string>('purple')
+  const [themeColor, setThemeColor] = useState<string>('#bf5af2')
   const knobTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   
   // Refs to avoid closure staleness in event listeners
@@ -145,7 +145,7 @@ export default function App() {
   const needsPairing = !hueState.paired && !hueState.connected
 
   return (
-    <div className="app-container" data-theme={themeColor}>
+    <div className="app-container" style={{ '--accent-hue': themeColor } as React.CSSProperties}>
       {/* Header */}
       <header className="app-header">
         <div className="header-left">

@@ -24,17 +24,8 @@
   --radius-sm: 12px;
   
   --transition-smooth: 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  --accent-hue: var(--accent-purple); /* default */
+  --accent-hue: #bf5af2; /* default */
 }
-
-/* Theme support */
-[data-theme="orange"] { --accent-hue: var(--accent-orange); }
-[data-theme="red"] { --accent-hue: var(--accent-red); }
-[data-theme="green"] { --accent-hue: var(--accent-green); }
-[data-theme="blue"] { --accent-hue: var(--accent-blue); }
-[data-theme="purple"] { --accent-hue: var(--accent-purple); }
-[data-theme="yellow"] { --accent-hue: var(--accent-yellow); }
-[data-theme="white"] { --accent-hue: var(--accent-white); }
 
 /* ── Global Styles ── */
 * {

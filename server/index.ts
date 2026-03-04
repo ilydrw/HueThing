@@ -60,44 +60,30 @@ async function startup() {
       },
       pollInterval: {
         id: 'pollInterval',
-        type: SETTING_TYPES.SELECT,
-        label: 'Refresh Interval',
-        value: String(pollMs),
-        description: 'How often to refresh light states',
-        options: [
-          { label: '2 seconds', value: '2000' },
-          { label: '5 seconds', value: '5000' },
-          { label: '10 seconds', value: '10000' }
-        ]
+        type: SETTING_TYPES.RANGE,
+        label: 'Refresh Interval (ms)',
+        value: pollMs,
+        min: 1000,
+        max: 30000,
+        step: 500,
+        description: 'How often to refresh light states (if EventStream disconnected)'
       },
       knobStep: {
         id: 'knobStep',
-        type: SETTING_TYPES.SELECT,
-        label: 'Knob Step Size',
-        value: String(knobStep),
-        description: 'How much brightness changes per knob click',
-        options: [
-          { label: '1%', value: '1' },
-          { label: '2%', value: '2' },
-          { label: '5%', value: '5' },
-          { label: '10%', value: '10' }
-        ]
+        type: SETTING_TYPES.RANGE,
+        label: 'Knob Step Size (%)',
+        value: knobStep,
+        min: 1,
+        max: 20,
+        step: 1,
+        description: 'How much brightness changes per knob click'
       },
       themeColor: {
         id: 'themeColor',
-        type: SETTING_TYPES.SELECT,
+        type: SETTING_TYPES.COLOR,
         label: 'UI Theme Color',
-        value: 'orange',
-        description: 'Accent color on the Car Thing display',
-        options: [
-          { label: 'Orange (Default)', value: 'orange' },
-          { label: 'Red', value: 'red' },
-          { label: 'Green', value: 'green' },
-          { label: 'Blue', value: 'blue' },
-          { label: 'Purple', value: 'purple' },
-          { label: 'Yellow', value: 'yellow' },
-          { label: 'White', value: 'white' }
-        ]
+        value: '#bf5af2',
+        description: 'Accent color on the Car Thing display'
       },
       iconColor: {
         id: 'iconColor',
@@ -178,7 +164,6 @@ async function startup() {
       tag: 'basic'
     })
 
-    console.log('[HueThing] Registering setup task...')
     DeskThing.tasks.add({
         id: 'setup-hue',
         version: '1.0.0',
@@ -195,19 +180,19 @@ async function startup() {
                 completed: !!hueService.getConfig()?.bridgeIp,
                 strict: true,
                 label: 'Step 1: Enter Bridge IP',
-                instructions: 'Enter your Philips Hue Bridge IP address manually, or use the \'Discover Bridges\' action to find it.',
+                instructions: 'Enter your Philips Hue Bridge IP address manually (or use the Discover action below). Once set, it will unlock Step 2.',
                 setting: {
                     id: 'bridgeIp',
-                    source: 'huething'
                 }
             },
             'step-2': {
                 id: 'step-2',
+                parentId: 'step-1', // Hidden until step-1 is completed
                 type: STEP_TYPES.ACTION,
                 completed: !!hueService.getConfig()?.appKey,
                 strict: true,
                 label: 'Step 2: Push Link Button',
-                instructions: 'Once the IP is set, press the physical link button on your Philips Hue Bridge, then immediately click the \'Pair\' action below within 30 seconds.',
+                instructions: 'Now that the IP is set, press the physical link button on your Philips Hue Bridge, then immediately click the \'Pair\' action below within 30 seconds.',
                 action: {
                     id: 'serverPair',
                     source: 'huething'
@@ -215,14 +200,14 @@ async function startup() {
             },
             'step-3': {
                 id: 'step-3',
+                parentId: 'step-2', // Hidden until pairing in step-2 is run successfully
                 type: STEP_TYPES.SETTING,
                 completed: !!hueService.getConfig()?.appKey,
                 strict: false,
                 label: 'Step 3: Confirm Authentication',
-                instructions: 'Once pairing is successful, the App Key will be filled automatically. You can also paste an existing key here to skip pairing.',
+                instructions: 'Pairing completed! The App Key is filled automatically. You may skip this step.',
                 setting: {
                     id: 'appKey',
-                    source: 'huething'
                 }
             }
         }
@@ -278,18 +263,36 @@ async function sendFullState() {
   try {
     const state = await hueService.fetchAllData()
     DeskThing.send({ type: 'hueState', payload: state })
+    updateDynamicIcons(state)
   } catch (err) {
-    DeskThing.send({
-      type: 'hueState',
-      payload: {
-        connected: false,
-        paired: false,
-        bridgeIp: hueService.getConfig()?.bridgeIp || '',
-        lights: [],
-        rooms: [],
-        scenes: []
-      } as HueState
-    })
+    const fallbackState = {
+      connected: false,
+      paired: false,
+      bridgeIp: hueService.getConfig()?.bridgeIp || '',
+      lights: [],
+      rooms: [],
+      scenes: []
+    } as HueState
+    DeskThing.send({ type: 'hueState', payload: fallbackState })
+    updateDynamicIcons(fallbackState)
+  }
+}
+
+function updateDynamicIcons(state: HueState) {
+  // Update the Toggle All Lights icon dynamically based on the state
+  const config = hueService.getConfig()
+  if (!config?.bridgeIp || !config?.appKey || !state.connected) {
+    DeskThing.updateIcon('toggleAllLights', '') // reset to default
+    return
+  }
+
+  const anyOn = state.lights.some(l => l.on)
+  
+  // Example of using the DeskThing Links API to dynamically swap the icon SVGs rendered for actions on Car Thing
+  if (anyOn) {
+    DeskThing.updateIcon('toggleAllLights', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="var(--accent-hue, #bf5af2)" d="M12 2C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 017 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1zM10 20h4c0 1.1-.9 2-2 2s-2-.9-2-2z"/></svg>`)
+  } else {
+    DeskThing.updateIcon('toggleAllLights', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6A4.997 4.997 0 017 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1zM10 20h4c0 1.1-.9 2-2 2s-2-.9-2-2z"/></svg>`)
   }
 }
 
@@ -478,15 +481,19 @@ DeskThing.on('settings', async (data: any) => {
     if (newConfig.bridgeIp && newConfig.appKey) {
         hueService.startEventStream()
         await sendFullState()
+        // Ensure steps 2 and 3 are marked complete if we magically got full auth
+        DeskThing.steps.complete('setup-hue', 'step-2')
+        DeskThing.steps.complete('setup-hue', 'step-3')
+        DeskThing.tasks.complete('setup-hue')
     }
   }
 
-  if (settings?.pollInterval?.value) {
-    pollMs = Number(settings.pollInterval.value)
+  if (settings?.pollInterval?.value && typeof settings.pollInterval.value === 'number') {
+    pollMs = settings.pollInterval.value
     DeskThing.saveData({ pollInterval: pollMs })
   }
-  if (settings?.knobStep?.value) {
-    knobStep = Number(settings.knobStep.value)
+  if (settings?.knobStep?.value && typeof settings.knobStep.value === 'number') {
+    knobStep = settings.knobStep.value
     DeskThing.saveData({ knobStep })
   }
   if (settings?.iconColor?.value) {
