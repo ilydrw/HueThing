@@ -340,12 +340,19 @@ async function startPairingProcess(bridgeIp: string) {
         appKey: result.appKey!
       })
       console.log('[HueController] Bridge paired successfully!')
-      hueService.startEventStream()
-      await sendFullState()
-      DeskThing.send({ type: 'huePairStatus', payload: result })
+      
+      // CRITICAL: Actually apply the new credentials to the HueService in memory!
+      hueService.setConfig({ bridgeIp, appKey: result.appKey! })
+
+      // Complete the DAG Steps formally so DeskThing knows this Task tree is valid
+      DeskThing.steps.complete('setup-hue', 'step-1')
       DeskThing.steps.complete('setup-hue', 'step-2')
       DeskThing.steps.complete('setup-hue', 'step-3')
       DeskThing.tasks.complete('setup-hue')
+
+      hueService.startEventStream()
+      await sendFullState()
+      DeskThing.send({ type: 'huePairStatus', payload: result })
     } else {
       // Check if it's the "link button not pressed" error
       if (result.error?.includes('link button')) {
