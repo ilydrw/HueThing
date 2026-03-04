@@ -414,6 +414,17 @@ DeskThing.on('setLight', async (data: any) => {
   }
 })
 
+// Set light color (from Color Picker UI)
+DeskThing.on('setLightColor', async (data: any) => {
+  const { lightId, ...state } = data?.payload || {}
+  if (!lightId) return
+  // `state` will either contain { hue, saturation } OR { temperature }
+  const success = await hueService.setLightColor(lightId, state)
+  if (success) {
+    setTimeout(() => sendFullState(), 300)
+  }
+})
+
 // Set room (grouped light) state
 DeskThing.on('setRoom', async (data: any) => {
   const { groupedLightId, ...state } = data?.payload || {}

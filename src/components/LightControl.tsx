@@ -9,9 +9,10 @@ interface LightControlProps {
   room: SimplifiedRoom
   lights: SimplifiedLight[]
   onBack: () => void
+  onPickColor: (light: SimplifiedLight) => void
 }
 
-export default function LightControl({ room, lights, onBack }: LightControlProps) {
+export default function LightControl({ room, lights, onBack, onPickColor }: LightControlProps) {
   const [expandedLight, setExpandedLight] = useState<string | null>(null)
 
   const handleToggleRoom = () => {
@@ -64,21 +65,31 @@ export default function LightControl({ room, lights, onBack }: LightControlProps
             </div>
 
             {light.on && (
-              <div 
-                className="hue-slider-container" 
-                style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px' }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="hue-slider-fill" style={{ width: `${light.brightness}%` }} />
-                <input 
-                  type="range"
-                  className="hue-slider-input"
-                  min="1"
-                  max="100"
-                  value={light.brightness}
-                  onChange={(e) => handleBrightnessChange(light.id, Number(e.target.value))}
-                />
-              </div>
+              <>
+                <div style={{ position: 'absolute', top: '16px', right: '16px' }}>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onPickColor(light); }}
+                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '16px', fontSize: '14px', fontWeight: 600 }}
+                  >
+                    Adjust Color
+                  </button>
+                </div>
+                <div 
+                  className="hue-slider-container" 
+                  style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="hue-slider-fill" style={{ width: `${light.brightness}%` }} />
+                  <input 
+                    type="range"
+                    className="hue-slider-input"
+                    min="1"
+                    max="100"
+                    value={light.brightness}
+                    onChange={(e) => handleBrightnessChange(light.id, Number(e.target.value))}
+                  />
+                </div>
+              </>
             )}
           </div>
         ))}

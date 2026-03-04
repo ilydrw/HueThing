@@ -456,6 +456,65 @@ export class HueService {
     return this.apiPut(`/clip/v2/resource/light/${lightId}`, body)
   }
 
+  async setLightColor(lightId: string, state: { hue?: number, saturation?: number, temperature?: number }): Promise<boolean> {
+    const body: Record<string, any> = {}
+
+    if (state.temperature !== undefined) {
+      body.color_temperature = { mirek: state.temperature }
+    } else if (state.hue !== undefined && state.saturation !== undefined) {
+      // Hue uses CIE XY color space, we must convert HSV (0-360, 0-100) to XY space
+      const xy = this.hsvToXy(state.hue, state.saturation)
+      body.color = { xy }
+    }
+
+    return this.apiPut(`/clip/v2/resource/light/${lightId}`, body)
+  }
+
+  private hsvToXy(h: number, s: number): { x: number, y: number } {
+    // Normalization
+    h = h / 360
+    s = s / 100
+    const v = 1.0 // Assume full brightness for color calculation, dimming handled separately
+    
+    // HSV to RGB
+    let r = 0, g = 0, b = 0
+    const i = Math.floor(h * 6)
+    const f = h * 6 - i
+    const p = v * (1 - s)
+    const q = v * (1 - f * s)
+    const t = v * (1 - (1 - f) * s)
+
+    switch (i % 6) {
+      case 0: r = v, g = t, b = p; break
+      case 1: r = q, g = v, b = p; break
+      case 2: r = p, g = v, b = t; break
+      case 3: r = p, g = q, b = v; break
+      case 4: r = t, g = p, b = v; break
+      case 5: r = v, g = p, b = q; break
+    }
+
+    // RGB to Linear RGB
+    // Apply gamma correction
+    const rL = (r > 0.04045) ? Math.pow((r + 0.055) / (1.0 + 0.055), 2.4) : (r / 12.92)
+    const gL = (g > 0.04045) ? Math.pow((g + 0.055) / (1.0 + 0.055), 2.4) : (g / 12.92)
+    const bL = (b > 0.04045) ? Math.pow((b + 0.055) / (1.0 + 0.055), 2.4) : (b / 12.92)
+
+    // Linear RGB to CIE XYZ
+    const X = rL * 0.664511 + gL * 0.154324 + bL * 0.162028
+    const Y = rL * 0.283881 + gL * 0.668433 + bL * 0.047685
+    const Z = rL * 0.000088 + gL * 0.072310 + bL * 0.986039
+
+    // CIE XYZ to CIE xy
+    let x = (X / (X + Y + Z)) || 0
+    let y = (Y / (X + Y + Z)) || 0
+
+    // Prevent floating point explosion
+    x = isNaN(x) ? 0 : x
+    y = isNaN(y) ? 0 : y
+
+    return { x, y }
+  }
+
   async setGroupedLightState(groupedLightId: string, state: {
     on?: boolean
     brightness?: number

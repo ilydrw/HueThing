@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { DeskThingClass } from '@deskthing/client'
-import { HueState, SimplifiedRoom } from './types'
+import { HueState, SimplifiedRoom, SimplifiedLight } from './types'
 import Dashboard from './components/Dashboard'
 import LightControl from './components/LightControl'
 import ScenePicker from './components/ScenePicker'
 import PairingFlow from './components/PairingFlow'
+import ColorPicker from './components/ColorPicker'
 import { HueIcon } from './components/HueIcons'
 import { Logo } from './components/Logo'
 
@@ -24,6 +25,7 @@ export default function App() {
 
   const [view, setView] = useState<View>('dashboard')
   const [selectedRoom, setSelectedRoom] = useState<SimplifiedRoom | null>(null)
+  const [pickingColorLight, setPickingColorLight] = useState<SimplifiedLight | null>(null)
   const [knobBrightness, setKnobBrightness] = useState<number | null>(null)
   const [themeColor, setThemeColor] = useState<string>('#bf5af2')
   const knobTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -137,6 +139,10 @@ export default function App() {
     setView('dashboard')
   }, [])
 
+  const handlePickColor = useCallback((light: SimplifiedLight) => {
+    setPickingColorLight(light)
+  }, [])
+
   const handleViewScenes = useCallback((room: SimplifiedRoom) => {
     setSelectedRoom(room)
     setView('scenes')
@@ -228,6 +234,7 @@ export default function App() {
             room={selectedRoom}
             lights={hueState.lights.filter(l => selectedRoom.lightIds.includes(l.id))}
             onBack={handleBack}
+            onPickColor={handlePickColor}
           />
         ) : view === 'scenes' && selectedRoom ? (
           <ScenePicker
@@ -252,6 +259,14 @@ export default function App() {
           <div className="knob-value">{knobBrightness}%</div>
           <div className="knob-label">Brightness</div>
         </div>
+      )}
+
+      {/* Color Picker Full Screen Overlay */}
+      {pickingColorLight && (
+        <ColorPicker
+          light={pickingColorLight}
+          onClose={() => setPickingColorLight(null)}
+        />
       )}
     </div>
   )

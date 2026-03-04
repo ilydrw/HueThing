@@ -445,3 +445,124 @@ h1, h2, h3 {
 .action-btn.secondary:active {
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* ── Color Picker Overlay ── */
+.color-picker-fullscreen {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg-app);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+}
+
+.picker-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.color-wheel {
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 90deg,
+    hsl(0, 100%, 50%),
+    hsl(30, 100%, 50%),
+    hsl(60, 100%, 50%),
+    hsl(90, 100%, 50%),
+    hsl(120, 100%, 50%),
+    hsl(150, 100%, 50%),
+    hsl(180, 100%, 50%),
+    hsl(210, 100%, 50%),
+    hsl(240, 100%, 50%),
+    hsl(270, 100%, 50%),
+    hsl(300, 100%, 50%),
+    hsl(330, 100%, 50%),
+    hsl(360, 100%, 50%)
+  );
+  position: relative;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+.color-wheel::after {
+  content: '';
+  position: absolute;
+  top: 10%; left: 10%; right: 10%; bottom: 10%;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  box-shadow: inset 0 8px 16px rgba(0,0,0,0.3);
+}
+
+.color-cursor {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  transition: all 0.1s linear;
+}
+
+.temp-slider {
+  width: 100%;
+  height: 64px;
+  border-radius: 32px;
+  background: linear-gradient(to right, #9cdbff, #ffffff, #ffd99f, #ffb45a);
+  position: relative;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.temp-cursor {
+  width: 48px;
+  height: 80px;
+  background: #ffffff;
+  border-radius: 24px;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  transition: left 0.1s linear;
+}
+
+.picker-controls {
+  display: flex;
+  gap: 24px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mode-toggles {
+  display: flex;
+  background: var(--bg-surface);
+  border-radius: 32px;
+  padding: 8px;
+}
+
+.mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 16px 48px;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: 24px;
+  transition: var(--transition-smooth);
+}
+
+.mode-btn.active {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.confirm-btn {
+  padding: 24px 64px;
+  font-size: 24px;
+}
