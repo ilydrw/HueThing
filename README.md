@@ -1,3 +1,5 @@
+<img width="1280" height="640" alt="HueThingWordmark" src="https://github.com/user-attachments/assets/aa0034d8-c7f4-406f-b65d-82eaafbc8a10" />
+
 # HueThing for DeskThing
 
 Control your Philips Hue ecosystem directly from your Spotify Car Thing using the DeskThing application!
