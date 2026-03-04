@@ -5,7 +5,7 @@
 Control your Philips Hue ecosystem directly from your Spotify Car Thing using the DeskThing application!
 
 ## Features
-- **Local Control:** Communicates directly with your Philips Hue Bridge over your local netowork for blazing-fast response times.
+- **Local Control:** Communicates directly with your Philips Hue Bridge over your local network for blazing-fast response times.
 - **Auto-Discovery:** Easily find your Hue Bridge on the network.
 - **Dynamic Dashboard:** Real-time state syncing of your Rooms and Lights.
 - **Lighting Control:** Toggle individual lights or entire rooms, adjust brightness, and configure physical Car Thing buttons to trigger actions.
