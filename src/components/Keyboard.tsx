@@ -12,23 +12,31 @@ export default function Keyboard({ onInput, onDone, onCancel, initialValue = '',
   const [value, setValue] = useState(initialValue)
 
   const handleKey = useCallback((key: string) => {
-    let newValue = value
-    if (key === 'BACK') {
-      newValue = value.slice(0, -1)
+    if (key === 'BACKSPACE') {
+      setValue(prev => {
+        const newValue = prev.slice(0, -1)
+        onInput(newValue)
+        return newValue
+      })
     } else if (key === 'CLEAR') {
-      newValue = ''
-    } else if (key === 'IP_PREFIX') {
-      newValue = '192.168.'
+      setValue('')
+      onInput('')
+    } else if (key === 'CANCEL') {
+      onCancel()
     } else {
-      // Prevent overly long IP strings 
-      if (value.length >= 15 && key !== 'BACK') return
-      newValue = value + key
+      // Basic validation for IP characters
+      if (value.length < 15) {
+        setValue(prev => {
+          const newValue = prev + key
+          onInput(newValue)
+          return newValue
+        })
+      }
     }
-    setValue(newValue)
-    onInput(newValue)
-  }, [value, onInput])
+  }, [value, onCancel, onInput])
 
-  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '192.168.', '0', '.', 'BACK']
+  // Custom key layout 
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.', 'BACKSPACE', '192.168.']
 
   return (
     <div className="kb-fullscreen fade-in" style={{ touchAction: 'none' }}>
@@ -50,34 +58,20 @@ export default function Keyboard({ onInput, onDone, onCancel, initialValue = '',
       </div>
       
       <div className="kb-grid">
-        {keys.map((key) => {
-          const isPrefix = key === '192.168.'
-          const isBack = key === 'BACK'
-          
-          return (
-            <button
-              key={key}
-              className={`kb-key ${isPrefix ? 'kb-prefix-key' : ''} ${isBack ? 'kb-key-back' : ''}`}
-              // Using onPointerDown for immediate feedback in Chrome 69
-              onPointerDown={(e) => {
-                e.preventDefault()
-                handleKey(key === '192.168.' ? 'IP_PREFIX' : key)
-              }}
-              style={{ touchAction: 'manipulation' }}
-            >
-              {isBack ? '⌫' : key}
-            </button>
-          )
-        })}
+        {keys.map(key => (
+          <button 
+            key={key}
+            className={`kb-key ${key === '192.168.' ? 'kb-prefix-key' : ''} ${key === 'BACKSPACE' ? 'kb-key-back' : ''}`}
+            onClick={() => handleKey(key)}
+          >
+            {key === 'BACKSPACE' ? '⌫' : key}
+          </button>
+        ))}
         
         <button 
           className="kb-key kb-done-key"
-          onPointerDown={(e) => {
-            e.preventDefault()
-            onDone()
-          }}
-          disabled={!value}
-          style={{ touchAction: 'manipulation' }}
+          onClick={onDone}
+          disabled={!value || value.length < 7}
         >
           Connect Bridge
         </button>

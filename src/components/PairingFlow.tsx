@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { DeskThingClass } from '@deskthing/client'
 import { HueState } from '../types'
 import Keyboard from './Keyboard'
+import { HueBridgeIcon } from './HueBridgeIcon'
 
 const deskthing = DeskThingClass.getInstance()
 
@@ -153,7 +154,7 @@ export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
             className="pairing-bridge-icon"
             style={{ animation: 'float 3s ease-in-out infinite', background: 'var(--bg-glass-heavy)', padding: '20px', borderRadius: '50%', border: '2px solid var(--border-glow)', zIndex: 2, position: 'relative' }}
           >
-            <img src="/hue-bridge.svg" alt="Hue Bridge" style={{ width: '80px', height: '80px' }} />
+            <HueBridgeIcon size={80} />
           </div>
         </div>
         <div style={{ marginTop: '32px', textAlign: 'center' }}>
@@ -187,7 +188,7 @@ export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
           </div>
           <div className="success-checkmark">✓</div>
           <div className="pairing-bridge-icon" style={{ background: 'linear-gradient(135deg, var(--accent-green), #03251a)', padding: '24px', borderRadius: '50%', border: '2px solid var(--accent-green)', boxShadow: '0 0 40px rgba(50, 215, 75, 0.3)', zIndex: 2, position: 'relative' }}>
-            <img src="/hue-bridge.svg" alt="Hue Bridge" style={{ width: '80px', height: '80px', filter: 'brightness(0) invert(1)' }} />
+            <HueBridgeIcon size={80} invert />
           </div>
         </div>
         <h2 style={{ fontSize: '36px', fontWeight: '900', marginTop: '32px' }}>Connected!</h2>
@@ -209,7 +210,7 @@ export default function PairingFlow({ hueState, onPaired }: PairingFlowProps) {
     <div className="view-container fade-in">
       <div className="pairing-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
         <div className="pairing-bridge-icon" style={{ background: 'linear-gradient(135deg, var(--accent-red), #350a0a)', padding: '24px', borderRadius: '50%', border: '2px solid var(--accent-red)', boxShadow: '0 0 40px rgba(255, 69, 58, 0.3)', zIndex: 2, position: 'relative' }}>
-          <img src="/hue-bridge.svg" alt="Hue Bridge" style={{ width: '80px', height: '80px', filter: 'brightness(0) invert(1)' }} />
+          <HueBridgeIcon size={80} invert />
         </div>
         <h2 style={{ fontSize: '32px', fontWeight: '900', marginTop: '32px' }}>Connection Failed</h2>
         <p style={{ color: 'var(--text-secondary)', marginTop: '12px', fontSize: '18px', textAlign: 'center', maxWidth: '400px' }}>

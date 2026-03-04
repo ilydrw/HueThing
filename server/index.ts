@@ -34,192 +34,209 @@ async function startup() {
       }
     }
 
-    console.log('[HueThing] Registering settings...')
-    // Register settings
-    await DeskThing.initSettings({
-      bridgeIp: {
-        id: 'bridgeIp',
-        type: SETTING_TYPES.STRING,
-        label: 'Hue Bridge IP',
-        value: hueService.getConfig()?.bridgeIp || '',
-        description: 'IP address of your Philips Hue Bridge'
-      },
-      appKey: {
-        id: 'appKey',
-        type: SETTING_TYPES.STRING, // Use STRING as DeskThing might not have PASSWORD type in all versions, but usually it's masked if it's sensitive
-        label: 'Hue App Key (Username)',
-        value: hueService.getConfig()?.appKey || '',
-        description: 'Your bridge API username (Optional if pairing via app)'
-      },
-      clientKey: {
-        id: 'clientKey',
-        type: SETTING_TYPES.STRING,
-        label: 'Hue Client Key',
-        value: hueService.getConfig()?.clientKey || '',
-        description: 'Used for Entertainment API (Optional)'
-      },
-      pollInterval: {
-        id: 'pollInterval',
-        type: SETTING_TYPES.RANGE,
-        label: 'Refresh Interval (ms)',
-        value: pollMs,
-        min: 1000,
-        max: 30000,
-        step: 500,
-        description: 'How often to refresh light states (if EventStream disconnected)'
-      },
-      knobStep: {
-        id: 'knobStep',
-        type: SETTING_TYPES.RANGE,
-        label: 'Knob Step Size (%)',
-        value: knobStep,
-        min: 1,
-        max: 20,
-        step: 1,
-        description: 'How much brightness changes per knob click'
-      },
-      themeColor: {
-        id: 'themeColor',
-        type: SETTING_TYPES.COLOR,
-        label: 'UI Theme Color',
-        value: '#bf5af2',
-        description: 'Accent color on the Car Thing display'
-      },
-      iconColor: {
-        id: 'iconColor',
-        type: SETTING_TYPES.SELECT,
-        label: 'Hardware Button Icon Color',
-        value: 'white',
-        description: 'Color of the physical Car Thing button icons',
-        options: [
-          { label: 'White (Default)', value: 'white' },
-          { label: 'Orange', value: 'orange' },
-          { label: 'Red', value: 'red' },
-          { label: 'Green', value: 'green' },
-          { label: 'Blue', value: 'blue' },
-          { label: 'Purple', value: 'purple' },
-          { label: 'Yellow', value: 'yellow' }
-        ]
-      }
-    })
+    try {
+      console.log('[HueThing] Registering settings...')
+      // Register settings
+      await DeskThing.initSettings({
+        bridgeIp: {
+          id: 'bridgeIp',
+          type: SETTING_TYPES.STRING,
+          label: 'Hue Bridge IP',
+          value: hueService.getConfig()?.bridgeIp || '',
+          description: 'IP address of your Philips Hue Bridge'
+        },
+        appKey: {
+          id: 'appKey',
+          type: SETTING_TYPES.STRING,
+          label: 'Hue App Key (Username)',
+          value: hueService.getConfig()?.appKey || '',
+          description: 'Your bridge API username (Optional if pairing via app)'
+        },
+        clientKey: {
+          id: 'clientKey',
+          type: SETTING_TYPES.STRING,
+          label: 'Hue Client Key',
+          value: hueService.getConfig()?.clientKey || '',
+          description: 'Used for Entertainment API (Optional)'
+        },
+        pollInterval: {
+          id: 'pollInterval',
+          type: SETTING_TYPES.RANGE,
+          label: 'Refresh Interval (ms)',
+          value: pollMs,
+          min: 1000,
+          max: 30000,
+          step: 500,
+          description: 'How often to refresh light states (if EventStream disconnected)'
+        },
+        knobStep: {
+          id: 'knobStep',
+          type: SETTING_TYPES.RANGE,
+          label: 'Knob Step Size (%)',
+          value: knobStep,
+          min: 1,
+          max: 20,
+          step: 1,
+          description: 'How much brightness changes per knob click'
+        },
+        themeColor: {
+          id: 'themeColor',
+          type: SETTING_TYPES.COLOR,
+          label: 'UI Theme Color',
+          value: '#bf5af2',
+          description: 'Accent color on the Car Thing display'
+        },
+        iconColor: {
+          id: 'iconColor',
+          type: SETTING_TYPES.SELECT,
+          label: 'Hardware Button Icon Color',
+          value: 'white',
+          description: 'Color of the physical Car Thing button icons',
+          options: [
+            { label: 'White (Default)', value: 'white' },
+            { label: 'Orange', value: 'orange' },
+            { label: 'Red', value: 'red' },
+            { label: 'Green', value: 'green' },
+            { label: 'Blue', value: 'blue' },
+            { label: 'Purple', value: 'purple' },
+            { label: 'Yellow', value: 'yellow' }
+          ]
+        }
+      })
+    } catch (e) {
+      console.error('[HueThing] Failed to initSettings:', e)
+    }
 
     console.log('[HueThing] Registering actions...')
-    // Register actions
-    DeskThing.registerAction({
-      id: 'toggleAllLights',
-      name: 'Toggle All Lights',
-      description: 'Turn all lights on or off',
-      version: '1.0.0',
-      enabled: true,
-      tag: 'basic'
-    })
-    DeskThing.registerAction({
-      id: 'nextScene',
-      name: 'Next Scene',
-      description: 'Activate the next scene',
-      version: '1.0.0',
-      enabled: true,
-      tag: 'basic'
-    })
-    DeskThing.registerAction({
-      id: 'prevScene',
-      name: 'Previous Scene',
-      description: 'Activate the previous scene',
-      version: '1.0.0',
-      enabled: true,
-      tag: 'basic'
-    })
-    DeskThing.registerAction({
-      id: 'brightnessUp',
-      name: 'Brightness Up',
-      description: 'Increase brightness of active room',
-      version: '1.0.0',
-      enabled: true,
-      tag: 'basic'
-    })
-    DeskThing.registerAction({
-      id: 'brightnessDown',
-      name: 'Brightness Down',
-      description: 'Decrease brightness of active room',
-      version: '1.0.0',
-      enabled: true,
-      tag: 'basic'
-    })
-
-    // Server-only actions (visible in DeskThing Web UI)
-    DeskThing.registerAction({
-      id: 'serverDiscover',
-      name: '[SERVER] Discover Bridges',
-      description: 'Run mDNS, SSDP, and N-UPnP discovery from the server',
-      version: '1.0.0',
-      enabled: true,
-      tag: 'basic'
-    })
-    DeskThing.registerAction({
-      id: 'serverPair',
-      name: '[SERVER] Pair with Bridge IP',
-      description: 'Trigger pairing loop for the IP in settings',
-      version: '1.0.0',
-      enabled: true,
-      tag: 'basic'
-    })
-
-    DeskThing.tasks.add({
-        id: 'setup-hue',
+    try {
+      // Register actions
+      DeskThing.registerAction({
+        id: 'toggleAllLights',
+        name: 'Toggle All Lights',
+        description: 'Turn all lights on or off',
         version: '1.0.0',
-        available: true,
-        completed: !!(hueService.getConfig()?.bridgeIp && hueService.getConfig()?.appKey),
-        label: 'Hue Bridge Setup',
-        started: true,
-        currentStep: 'step-1',
-        description: 'Connect your Philips Hue Bridge to DeskThing.',
-        steps: {
-            'step-1': {
-                id: 'step-1',
-                type: STEP_TYPES.SETTING,
-                completed: !!hueService.getConfig()?.bridgeIp,
-                strict: true,
-                label: 'Step 1: Enter Bridge IP',
-                instructions: 'Enter your Philips Hue Bridge IP address manually (or use the Discover action below). Once set, it will unlock Step 2.',
-                setting: {
-                    id: 'bridgeIp',
-                }
-            },
-            'step-2': {
-                id: 'step-2',
-                parentId: 'step-1', // Hidden until step-1 is completed
-                type: STEP_TYPES.ACTION,
-                completed: !!hueService.getConfig()?.appKey,
-                strict: true,
-                label: 'Step 2: Push Link Button',
-                instructions: 'Now that the IP is set, press the physical link button on your Philips Hue Bridge, then immediately click the \'Pair\' action below within 30 seconds.',
-                action: {
-                    id: 'serverPair',
-                    source: 'huething'
-                }
-            },
-            'step-3': {
-                id: 'step-3',
-                parentId: 'step-2', // Hidden until pairing in step-2 is run successfully
-                type: STEP_TYPES.SETTING,
-                completed: !!hueService.getConfig()?.appKey,
-                strict: false,
-                label: 'Step 3: Confirm Authentication',
-                instructions: 'Pairing completed! The App Key is filled automatically. You may skip this step.',
-                setting: {
-                    id: 'appKey',
-                }
-            }
-        }
-    })
+        enabled: true,
+        tag: 'basic'
+      })
+      DeskThing.registerAction({
+        id: 'nextScene',
+        name: 'Next Scene',
+        description: 'Activate the next scene',
+        version: '1.0.0',
+        enabled: true,
+        tag: 'basic'
+      })
+      DeskThing.registerAction({
+        id: 'prevScene',
+        name: 'Previous Scene',
+        description: 'Activate the previous scene',
+        version: '1.0.0',
+        enabled: true,
+        tag: 'basic'
+      })
+      DeskThing.registerAction({
+        id: 'brightnessUp',
+        name: 'Brightness Up',
+        description: 'Increase brightness of active room',
+        version: '1.0.0',
+        enabled: true,
+        tag: 'basic'
+      })
+      DeskThing.registerAction({
+        id: 'brightnessDown',
+        name: 'Brightness Down',
+        description: 'Decrease brightness of active room',
+        version: '1.0.0',
+        enabled: true,
+        tag: 'basic'
+      })
+
+      // Server-only actions (visible in DeskThing Web UI)
+      DeskThing.registerAction({
+        id: 'serverDiscover',
+        name: '[SERVER] Discover Bridges',
+        description: 'Run mDNS, SSDP, and N-UPnP discovery from the server',
+        version: '1.0.0',
+        enabled: true,
+        tag: 'basic'
+      })
+      DeskThing.registerAction({
+        id: 'serverPair',
+        name: '[SERVER] Pair with Bridge IP',
+        description: 'Trigger pairing loop for the IP in settings',
+        version: '1.0.0',
+        enabled: true,
+        tag: 'basic'
+      })
+    } catch (e) {
+      console.error('[HueThing] Failed to registerActions:', e)
+    }
+
+    try {
+      DeskThing.tasks.add({
+          id: 'setup-hue',
+          version: '1.0.0',
+          available: true,
+          completed: !!(hueService.getConfig()?.bridgeIp && hueService.getConfig()?.appKey),
+          label: 'Hue Bridge Setup',
+          started: true,
+          currentStep: 'step-1',
+          description: 'Connect your Philips Hue Bridge to DeskThing.',
+          steps: {
+              'step-1': {
+                  id: 'step-1',
+                  type: STEP_TYPES.SETTING,
+                  completed: !!hueService.getConfig()?.bridgeIp,
+                  strict: true,
+                  label: 'Step 1: Enter Bridge IP',
+                  instructions: 'Enter your Philips Hue Bridge IP address manually (or use the Discover action below). Once set, it will unlock Step 2.',
+                  setting: {
+                      id: 'bridgeIp',
+                  }
+              },
+              'step-2': {
+                  id: 'step-2',
+                  parentId: 'step-1', // Hidden until step-1 is completed
+                  type: STEP_TYPES.ACTION,
+                  completed: !!hueService.getConfig()?.appKey,
+                  strict: true,
+                  label: 'Step 2: Push Link Button',
+                  instructions: 'Now that the IP is set, press the physical link button on your Philips Hue Bridge, then immediately click the \'Pair\' action below within 30 seconds.',
+                  action: {
+                      id: 'serverPair',
+                      source: 'huething'
+                  }
+              },
+              'step-3': {
+                  id: 'step-3',
+                  parentId: 'step-2', // Hidden until pairing in step-2 is run successfully
+                  type: STEP_TYPES.SETTING,
+                  completed: !!hueService.getConfig()?.appKey,
+                  strict: false,
+                  label: 'Step 3: Confirm Authentication',
+                  instructions: 'Pairing completed! The App Key is filled automatically. You may skip this step.',
+                  setting: {
+                      id: 'appKey',
+                  }
+              }
+          }
+      })
+    } catch (e) {
+      console.error('[HueThing] Failed to register tasks:', e)
+    }
 
     console.log('[HueThing] Registering keys...')
-    // Register the volume knob as a key for brightness control
-    DeskThing.registerKey('volumeKnob', 'Volume knob for brightness control', [
-      EventMode.ScrollUp,
-      EventMode.ScrollDown,
-      EventMode.PressShort
-    ], '1.0.0')
+    try {
+      // Register the volume knob as a key for brightness control
+      DeskThing.registerKey(
+        'volumeKnob',
+        'Volume knob for brightness control',
+        [ EventMode.ScrollUp, EventMode.ScrollDown, EventMode.PressShort ],
+        '1.0.0'
+      )
+    } catch (e) {
+      console.error('[HueThing] Failed to register keys:', e)
+    }
 
     // If already configured, start event stream
     if (hueService.isConfigured()) {
