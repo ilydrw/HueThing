@@ -13,7 +13,7 @@ Control your Philips Hue ecosystem directly from your Spotify Car Thing using th
 - **Easy Pairing:** Guided 3-step setup process directly from the DeskThing interface.
 
 ## Prerequisites
-- A Spotify Car Thing configured with [DeskThing](https://github.com/itsjakeism/DeskThing).
+- A Spotify Car Thing configured with [DeskThing](https://github.com/ItsRiprod/DeskThing).
 - A Philips Hue Bridge.
 
 ## Physical Controls
