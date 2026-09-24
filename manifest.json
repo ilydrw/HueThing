@@ -4,7 +4,7 @@
   "requires": [],
   "label": "HueThing",
   "icon": "icon.png",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Full Philips Hue light control from your Car Thing",
   "author": "ilydrw",
   "platforms": ["windows", "macos", "linux"],

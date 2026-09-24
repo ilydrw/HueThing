@@ -1,6 +1,6 @@
 {
   "name": "huething",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Control your Philips Hue lights from your Car Thing",
   "type": "module",
   "scripts": {
