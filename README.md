@@ -11,10 +11,14 @@ Control your Philips Hue ecosystem directly from your Spotify Car Thing using th
 - **Lighting Control:** Toggle individual lights or entire rooms, adjust brightness, and configure physical Car Thing buttons to trigger actions.
 - **Scene Support:** Activate any predefined scenes in your rooms.
 - **Easy Pairing:** Guided 3-step setup process directly from the DeskThing interface.
+- **Sync Features:** This app uses the Philips Hue Entertainment API for real-time light syncing.
 
 ## Prerequisites
 - A Spotify Car Thing configured with [DeskThing](https://github.com/ItsRiprod/DeskThing).
 - A Philips Hue Bridge.
+- **FOR SYNC FEATURES ONLY:** A Philips Hue Bridge that supports the Entertainment API (most 2nd gen and newer do).
+- **FOR SYNC FEATURES ONLY:** Ensure UDP Port 2100 is open on your firewall.
+- **FOR SYNC FEATURES ONLY:** Ensure Node Build Tools installed (npm install --global windows-build-tools on Windows or xcode-select --install on Mac) to compile the DTLS library.
 
 ## Physical Controls
 You can map your physical Car Thing inputs through DeskThing under the `Actions` or `Keys` settings:
@@ -23,6 +27,12 @@ You can map your physical Car Thing inputs through DeskThing under the `Actions`
 
 ## Developing
 This app is built mainly using React, TypeScript, and Vite on the frontend, and Node.js on the backend.
+
+
+**Note for Sync Features:** This app uses the Philips Hue Entertainment API for real-time light syncing.
+- Ensure you have Node Build Tools installed (npm install --global windows-build-tools on Windows or xcode-select --install on Mac) to compile the DTLS library.
+- You must re-pair your Bridge using the link button within this app to generate the necessary security keys for streaming.
+- Ensure UDP Port 2100 is open on your firewall.
 
 1. Clone this repository.
 2. Run `npm install` to grab dependencies.

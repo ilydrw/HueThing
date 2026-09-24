@@ -1,156 +1,201 @@
-import { useState, useRef, useEffect } from 'react'
-import { SimplifiedLight } from '../types'
-import { DeskThingClass } from '@deskthing/client'
-import { HueIcon } from './HueIcons'
-
-const deskthing = DeskThingClass.getInstance()
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { HardwareInputPayload } from '../../shared/messages';
+import { SimplifiedLight } from '../types';
+import { ColorWheel } from './color-picker/ColorWheel';
+import { TemperatureSlider } from './color-picker/TemperatureSlider';
+import { clamp, getInitialColorState, MAX_MIREK, MIN_MIREK, useDynamicContrast } from './color-picker/colorUtils';
+import { useHueStoreActions } from '../state';
 
 interface ColorPickerProps {
-  light: SimplifiedLight
-  onClose: () => void
+  light: SimplifiedLight;
+  hardwareInput?: HardwareInputPayload | null;
+  onClose: () => void;
 }
 
-type ColorMode = 'wheel' | 'temperature'
+type ColorMode = 'wheel' | 'temperature';
 
-// Pure UI Component for the Color Picker
-export default function ColorPicker({ light, onClose }: ColorPickerProps) {
-  const [mode, setMode] = useState<ColorMode>('wheel')
-  
-  // Local state for the wheel cursor (0-360 degrees) and temperature (153-500 mireds)
-  const [hueAngle, setHueAngle] = useState(0) // 0 to 360
-  const [temperature, setTemperature] = useState(300) // 153 to 500
-  
-  // Refs for hardware bindings
-  const hueRef = useRef(hueAngle)
-  const tempRef = useRef(temperature)
-  const modeRef = useRef(mode)
-  
+export default function ColorPicker({ light, hardwareInput, onClose }: ColorPickerProps) {
+  const actions = useHueStoreActions();
+  const [mode, setMode] = useState<ColorMode>(light.hasColor ? 'wheel' : 'temperature');
+  const [hueAngle, setHueAngle] = useState(0);
+  const [saturation, setSaturation] = useState(100);
+  const [temperature, setTemperature] = useState(light.colorTemp ?? 300);
+
+  const [isWheelDragging, setIsWheelDragging] = useState(false);
+  const [isTempDragging, setIsTempDragging] = useState(false);
+
+  const wheelRef = useRef<HTMLDivElement>(null);
+  const tempTrackRef = useRef<HTMLDivElement>(null);
+  const processedHardwareInput = useRef<HardwareInputPayload | null>(null);
+
+  const wheelRadius = 110;
+  const displayLightness = 100 - (saturation / 2);
+  const puckContrastColor = useDynamicContrast(hueAngle, 100, displayLightness);
+  const activeTempRange = light.colorTempRange || { min: MIN_MIREK, max: MAX_MIREK };
+
   useEffect(() => {
-    hueRef.current = hueAngle
-    tempRef.current = temperature
-    modeRef.current = mode
-  }, [hueAngle, temperature, mode])
-  
+    const initialColor = getInitialColorState(light);
+    setHueAngle(initialColor.hue);
+    setSaturation(initialColor.saturation);
+    setTemperature(light.colorTemp ?? 300);
+    setMode(light.hasColor ? 'wheel' : 'temperature');
+  }, [light]);
+
   useEffect(() => {
-    // Override Car Thing Hardware Buttons only while the Color Picker is mounted
-    const removeScrollUp = deskthing.on('scrollUp' as any, () => {
-      if (modeRef.current === 'wheel') {
-        setHueAngle((prev) => (prev + 10) % 360)
-      } else {
-        setTemperature((prev) => Math.min(500, prev + 15)) // Cooler
-      }
-    })
-    
-    const removeScrollDown = deskthing.on('scrollDown' as any, () => {
-      if (modeRef.current === 'wheel') {
-        setHueAngle((prev) => (prev - 10 + 360) % 360)
-      } else {
-        setTemperature((prev) => Math.max(153, prev - 15)) // Warmer
-      }
-    })
-    
-    // Press dial to cancel
-    const removeKnobPress = deskthing.on('pressShort' as any, () => {
-      onClose()
-    })
-    
-    // Support Mouse Scroll for testing in browser
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      if (e.deltaY < 0) {
-        if (modeRef.current === 'wheel') setHueAngle((prev) => (prev + 5) % 360)
-        else setTemperature((prev) => Math.min(500, prev + 10))
-      } else {
-        if (modeRef.current === 'wheel') setHueAngle((prev) => (prev - 5 + 360) % 360)
-        else setTemperature((prev) => Math.max(153, prev - 10))
-      }
+    if (!hardwareInput || processedHardwareInput.current === hardwareInput) return;
+    processedHardwareInput.current = hardwareInput;
+
+    if (hardwareInput.mode === 'pressShort' || hardwareInput.mode === 'pressLong') {
+      if (hardwareInput.mode === 'pressShort') onClose();
+      return;
     }
-    window.addEventListener('wheel', handleWheel, { passive: false })
-    
-    return () => {
-      removeScrollUp()
-      removeScrollDown()
-      removeKnobPress()
-      window.removeEventListener('wheel', handleWheel)
-    }
-  }, [onClose])
-  
-  const handleConfirm = () => {
+
+    const direction = hardwareInput.mode === 'scrollUp' ? 1 : -1;
     if (mode === 'wheel') {
-      // Send HSV equivalent to the server (Saturation ~100%, Brightness handled separately)
-      // The server will handle the conversion to CIE xy
-      deskthing.send({
-        type: 'setLightColor',
-        payload: { lightId: light.id, hue: hueAngle, saturation: 100 }
-      })
+      setHueAngle((prev) => (prev + (direction * 10) + 360) % 360);
     } else {
-      // Send pure Mireds
-      deskthing.send({
-        type: 'setLightColor',
-        payload: { lightId: light.id, temperature }
-      })
+      setTemperature((prev) => clamp(prev + (direction * 15), activeTempRange.min, activeTempRange.max));
     }
-    onClose()
-  }
+  }, [activeTempRange.max, activeTempRange.min, hardwareInput, mode, onClose]);
 
-  // Calculate cursor positions
-  // For Wheel: Angle to X/Y
-  const wheelRadius = 120
-  const radian = (hueAngle - 90) * (Math.PI / 180) // -90 to start at top
-  const cursorX = wheelRadius + (wheelRadius * 0.8) * Math.cos(radian)
-  const cursorY = wheelRadius + (wheelRadius * 0.8) * Math.sin(radian)
-  
-  // For Temp: Percentage along the bar
-  const tempPercent = ((temperature - 153) / (500 - 153)) * 100
+  const updateWheelFromPointer = useCallback((event: React.PointerEvent | PointerEvent) => {
+    if (!wheelRef.current) return;
+
+    const rect = wheelRef.current.getBoundingClientRect();
+    const centerX = rect.left + (rect.width / 2);
+    const centerY = rect.top + (rect.height / 2);
+    const px = event.clientX - centerX;
+    const py = event.clientY - centerY;
+    const distance = clamp(Math.sqrt((px * px) + (py * py)), 0, wheelRadius);
+    const angle = Math.atan2(py, px) * (180 / Math.PI);
+
+    setHueAngle((angle + 90 + 360) % 360);
+    setSaturation((distance / wheelRadius) * 100);
+  }, []);
+
+  const updateTemperatureFromPointer = useCallback((event: React.PointerEvent | PointerEvent) => {
+    if (!tempTrackRef.current) return;
+
+    const rect = tempTrackRef.current.getBoundingClientRect();
+    const ratio = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+    const nextTemperature = Math.round(activeTempRange.min + (ratio * (activeTempRange.max - activeTempRange.min)));
+    setTemperature(nextTemperature);
+  }, [activeTempRange.max, activeTempRange.min]);
+
+  useEffect(() => {
+    if (!isWheelDragging) return;
+
+    const handlePointerMove = (event: PointerEvent) => updateWheelFromPointer(event);
+    const handlePointerUp = () => setIsWheelDragging(false);
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [isWheelDragging, updateWheelFromPointer]);
+
+  useEffect(() => {
+    if (!isTempDragging) return;
+
+    const handlePointerMove = (event: PointerEvent) => updateTemperatureFromPointer(event);
+    const handlePointerUp = () => setIsTempDragging(false);
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [isTempDragging, updateTemperatureFromPointer]);
+
+  const handleConfirm = () => {
+    const payload = mode === 'wheel'
+      ? { lightId: light.id, hue: hueAngle, saturation }
+      : { lightId: light.id, temperature };
+
+    actions.setLightColor(payload);
+    onClose();
+  };
 
   return (
-    <div className="color-picker-fullscreen fade-in">
-      <div className="title-section" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <button className="tile-icon-bg" style={{ border: 'none', background: 'rgba(255,255,255,0.08)', width: '48px', height: '48px', margin: 0 }} onClick={onClose}>✕</button>
-        <div>
-          <h2 style={{ fontSize: '28px', fontWeight: 500, margin: 0 }}>{light.name}</h2>
-          <p style={{ fontSize: '16px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Adjust Color</p>
+    <div className="color-picker-fullscreen fade-in" role="dialog" aria-modal="true" aria-labelledby="color-picker-title">
+      <div className="glass-shine" />
+
+      <div className="picker-header">
+        <button className="close-btn-glass" type="button" onClick={onClose} aria-label="Close color picker">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m6 6 12 12M18 6 6 18" />
+          </svg>
+        </button>
+        <div className="picker-title-wrap">
+          <p className="hue-eyebrow">Light color</p>
+          <h2 id="color-picker-title">{light.name}</h2>
         </div>
+        <div className="picker-preview" style={{ background: mode === 'wheel' ? `hsl(${hueAngle} 100% ${displayLightness}%)` : 'rgb(255, 220, 174)' }} />
       </div>
 
-      <div className="picker-container">
+      <div className="picker-body">
         {mode === 'wheel' ? (
-          <div className="color-wheel">
-            <div 
-              className="color-cursor" 
-              style={{ left: cursorX, top: cursorY, backgroundColor: `hsl(${hueAngle}, 100%, 50%)` }} 
+          <div ref={wheelRef}>
+            <ColorWheel
+              hueAngle={hueAngle}
+              saturation={saturation}
+              wheelRadius={wheelRadius}
+              displayLightness={displayLightness}
+              puckContrastColor={puckContrastColor}
+              isDragging={isWheelDragging}
+              onPointerDown={(event) => {
+                setIsWheelDragging(true);
+                updateWheelFromPointer(event);
+              }}
             />
           </div>
         ) : (
-          <div className="temp-slider">
-            <div 
-              className="temp-cursor"
-              style={{ left: `${tempPercent}%` }}
+          <div ref={tempTrackRef} className="picker-temperature-track">
+            <TemperatureSlider
+              temperature={temperature}
+              min={activeTempRange.min}
+              max={activeTempRange.max}
+              onPointerDown={(event) => {
+                setIsTempDragging(true);
+                updateTemperatureFromPointer(event);
+              }}
             />
           </div>
         )}
       </div>
 
-      <div className="picker-controls">
-        <div className="mode-toggles">
-          <button 
-            className={`mode-btn ${mode === 'wheel' ? 'active' : ''}`}
-            onClick={() => setMode('wheel')}
+      <div className="picker-footer">
+        <div className="picker-mode-toggle" aria-label="Color mode">
+          <button
+            type="button"
+            disabled={!light.hasColor}
+            className={mode === 'wheel' ? 'is-active' : ''}
+            onClick={() => light.hasColor && setMode('wheel')}
           >
             Color
           </button>
-          <button 
-            className={`mode-btn ${mode === 'temperature' ? 'active' : ''}`}
-            onClick={() => setMode('temperature')}
+          <button
+            type="button"
+            disabled={!light.hasColorTemp}
+            className={mode === 'temperature' ? 'is-active' : ''}
+            onClick={() => light.hasColorTemp && setMode('temperature')}
           >
             White
           </button>
         </div>
-        
-        <button className="action-btn confirm-btn" onClick={handleConfirm}>
-          Confirm Color
+        <button
+          type="button"
+          className="hue-primary-button"
+          onClick={handleConfirm}
+        >
+          Done
         </button>
       </div>
     </div>
-  )
+  );
 }

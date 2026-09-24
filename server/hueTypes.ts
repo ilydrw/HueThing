@@ -1,5 +1,18 @@
 // Philips Hue v2 API type definitions
 
+export type {
+  HueState,
+  SimplifiedLight,
+  SimplifiedRoom,
+  SimplifiedScene,
+  SyncArea
+} from '../shared/hue.js';
+
+export {
+  EMPTY_HUE_STATE,
+  xyToRgb
+} from '../shared/hue.js';
+
 export interface HueBridgeConfig {
   bridgeIp: string
   appKey: string
@@ -48,8 +61,8 @@ export interface HueRoom {
     name: string
     archetype: string
   }
-  children: Array<{ rid: string; rtype: string }>
-  services: Array<{ rid: string; rtype: string }>
+  children: Array<{ rid: string; rtype: 'light' | 'device' | 'grouped_light' | string }>
+  services: Array<{ rid: string; rtype: 'light' | 'grouped_light' | string }>
 }
 
 export interface HueGroupedLight {
@@ -89,62 +102,3 @@ export interface HueApiResponse<T> {
   data: T[]
 }
 
-// Simplified types for client communication
-export interface SimplifiedLight {
-  id: string
-  name: string
-  on: boolean
-  brightness: number
-  colorXY?: { x: number; y: number }
-  colorTemp?: number
-  colorTempRange?: { min: number; max: number }
-  hasColor: boolean
-  hasColorTemp: boolean
-  roomId?: string
-}
-
-export interface SimplifiedRoom {
-  id: string
-  name: string
-  groupedLightId?: string
-  on: boolean
-  brightness: number
-  lightIds: string[]
-  sceneIds: string[]
-}
-
-export interface SimplifiedScene {
-  id: string
-  name: string
-  roomId: string
-  colors: Array<{ x: number; y: number; brightness: number }>
-}
-
-export interface HueState {
-  connected: boolean
-  paired: boolean
-  bridgeIp: string
-  lights: SimplifiedLight[]
-  rooms: SimplifiedRoom[]
-  scenes: SimplifiedScene[]
-}
-
-// Message types for client-server communication
-export type HueMessageType =
-  | 'hueState'
-  | 'hueLights'
-  | 'hueRooms'
-  | 'hueScenes'
-  | 'hueError'
-  | 'huePairStatus'
-  | 'hueDiscoverResult'
-
-export type HueRequestType =
-  | 'getState'
-  | 'discover'
-  | 'pair'
-  | 'setLight'
-  | 'setRoom'
-  | 'activateScene'
-  | 'toggleAll'
-  | 'setBridgeIp'

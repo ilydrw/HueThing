@@ -1,29 +1,37 @@
-import { useEffect, useState } from 'react'
-import { Logo } from './Logo'
+import React, { useEffect, useState } from 'react';
+import { Logo } from './Logo';
 
 export default function SplashScreen({ onComplete }: { onComplete: () => void }) {
-  const [phase, setPhase] = useState<'appear' | 'glide' | 'curtain'>('appear')
+  const [phase, setPhase] = useState<'display' | 'slide' | 'dissolve'>('display');
 
   useEffect(() => {
-    // Phase 1: Logo appears and hovers (0 to 1.5s)
-    const t1 = setTimeout(() => setPhase('glide'), 1500)
-    // Phase 2: Logo glides to top left (1.5s to 2.5s)
-    const t2 = setTimeout(() => setPhase('curtain'), 2500)
-    // Phase 3: Curtain pulls away, animation complete (2.5s to 3.5s)
-    const t3 = setTimeout(() => onComplete(), 3500)
-
+    // Timing for Chrome 69 compatibility
+    const t1 = setTimeout(() => setPhase('slide'), 1600);
+    const t2 = setTimeout(() => setPhase('dissolve'), 2400);
+    const t3 = setTimeout(() => onComplete(), 3200);
     return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(t3)
-    }
-  }, [onComplete])
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [onComplete]);
 
   return (
-    <div className={`splash-overlay ${phase === 'curtain' ? 'curtain-pull' : ''}`}>
-      <div className={`splash-logo-container phase-${phase}`}>
+    <div 
+      className={`splash-overlay ${phase === 'dissolve' ? 'curtain-pull' : ''}`} 
+      style={{ 
+        opacity: phase === 'dissolve' ? 0 : 1, 
+        transition: 'opacity 0.8s ease-in-out',
+        pointerEvents: 'none'
+      }}
+    >
+      <div style={{
+        // Precise Rule of Thirds scaling for 800x480
+        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: phase !== 'display' ? 'translateY(-100vh) scale(1.6)' : 'translateY(0) scale(1.6)',
+      }}>
         <Logo />
       </div>
     </div>
-  )
+  );
 }

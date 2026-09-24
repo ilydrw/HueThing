@@ -1,18 +1,9 @@
-import { DeskThing } from '@deskthing/server'
-import './dist/server/index.js'
+process.env.DESKTHING_ROOT_PATH ||= process.cwd()
 
-async function debug() {
-  try {
-    const listeners = DeskThing.listeners('start')
-    if (listeners.length > 0) {
-      await listeners[0]()
-      console.log('STARTUP SUCCESS')
-    } else {
-      console.log('NO START LISTENER')
-    }
-  } catch (err) {
-    console.error('CAUGHT ERROR:', err)
-  }
+try {
+  await import('./dist/server/index.js')
+  console.log('SERVER IMPORT SUCCESS')
+} catch (err) {
+  console.error('SERVER IMPORT FAILED:', err)
+  process.exitCode = 1
 }
-
-debug()

@@ -1,18 +1,10 @@
 {
   "id": "huething",
   "isWebApp": true,
-  "requires": [""],
+  "requires": [],
   "label": "HueThing",
-  "icon": "icon.png",
-  "icons": [
-    {
-      "src": "icon.png",
-      "sizes": "192x192 512x512 any",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "version": "1.1.0",
+  "icon": "icon.png", 
+  "version": "1.0.0",
   "description": "Full Philips Hue light control from your Car Thing",
   "author": "ilydrw",
   "platforms": ["windows", "macos", "linux"],
@@ -23,5 +15,7 @@
     "server": ">=0.11.13",
     "client": ">=0.11.2"
   },
-  "updateUrl": "https://github.com/ilydrw/huething"
+  "updateUrl": "https://github.com/ilydrw/huething",
+  "server": "dist/server/index.js",
+  "client": "dist/client/index.html"
 }

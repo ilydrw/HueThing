@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import React from 'react'
 import { SimplifiedRoom, SimplifiedLight } from '../types'
 import { DeskThingClass } from '@deskthing/client'
 import { HueIcon } from './HueIcons'
+import LightCard from './LightCard'
 
 const deskthing = DeskThingClass.getInstance()
 
@@ -13,8 +14,7 @@ interface LightControlProps {
 }
 
 export default function LightControl({ room, lights, onBack, onPickColor }: LightControlProps) {
-  const [expandedLight, setExpandedLight] = useState<string | null>(null)
-
+  
   const handleToggleRoom = () => {
     deskthing.send({
       type: 'setRoom',
@@ -22,90 +22,142 @@ export default function LightControl({ room, lights, onBack, onPickColor }: Ligh
     })
   }
 
-  const handleLightToggle = (light: SimplifiedLight) => {
+  const handleLightToggle = (id: string) => {
+    const light = lights.find(l => l.id === id);
+    if (!light) return;
+    
     deskthing.send({
       type: 'setLight',
-      payload: { lightId: light.id, on: !light.on }
+      payload: { lightId: id, on: !light.on }
     })
   }
 
-  const handleBrightnessChange = (lightId: string, brightness: number) => {
+  const handleBrightnessChange = (id: string, brightness: number) => {
     deskthing.send({
       type: 'setLight',
-      payload: { lightId, brightness: Number(brightness), on: true }
+      payload: { lightId: id, brightness: Math.round(brightness), on: true }
     })
   }
 
   return (
-    <div className="view-container fade-in">
-      <div className="title-section" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '32px' }}>
-        <button className="tile-icon-bg" style={{ border: 'none', background: 'rgba(255,255,255,0.08)', width: '48px', height: '48px', margin: 0 }} onClick={onBack}>←</button>
+    <div className="view-container" style={{
+      width: '800px',
+      height: '480px',
+      background: '#010417',
+      padding: '32px 0 32px 32px',
+      display: 'flex',
+      flexDirection: 'column',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      color: '#fff',
+      overflow: 'hidden',
+      boxSizing: 'border-box'
+    }}>
+      
+      {/* Title & Navigation */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
+        <button 
+          onClick={onBack}
+          style={{ 
+            background: 'rgba(255,255,255,0.08)', 
+            border: 'none', 
+            color: '#fff', 
+            width: '44px', 
+            height: '44px', 
+            borderRadius: '50%',
+            fontSize: '20px',
+            marginRight: '20px',
+            cursor: 'pointer'
+          }}
+        >
+          ←
+        </button>
         <div>
-          <h2 style={{ fontSize: '32px', fontWeight: 500, margin: 0, letterSpacing: '-0.5px' }}>{room.name}</h2>
-          <p style={{ fontSize: '16px', color: 'var(--text-secondary)', margin: '4px 0 0 0', fontWeight: 500 }}>{lights.length} Lights</p>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>{room.name}</h2>
+          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', margin: '2px 0 0 0', fontWeight: 600 }}>
+            {lights.length} Total Devices
+          </p>
         </div>
       </div>
 
-      <div className="tile-grid">
-        {lights.map((light) => (
+      <div style={{ display: 'flex', flex: 1, gap: '24px' }}>
+        {/* Scrollable Light Grid (Bento Style) */}
+        <div style={{ 
+          flex: 1, 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 1fr', 
+          gap: '16px', 
+          overflowY: 'auto',
+          paddingRight: '12px',
+          paddingBottom: '20px'
+        }}>
+          
+          {/* Master Control Hero - Spans 2 columns */}
           <div 
-            key={light.id} 
-            className={`hue-tile ${light.on ? 'active' : ''}`}
-            onClick={() => handleLightToggle(light)}
-            style={light.on ? ({ 
-              '--active-glow': 'radial-gradient(circle at top right, var(--accent-hue), transparent)',
-              paddingBottom: '60px' // Make space for the integrated slider
-            } as any) : {}}
+            onClick={handleToggleRoom}
+            style={{
+              gridColumn: 'span 2',
+              height: '90px',
+              background: room.on ? 'var(--hue-blue, #0F70B8)' : 'rgba(255,255,255,0.05)',
+              borderRadius: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0 24px',
+              border: room.on ? '1px solid rgba(255,255,255,0.3)' : '1px solid rgba(255,255,255,0.1)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              cursor: 'pointer'
+            }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div className="tile-icon-bg" style={{ width: '40px', height: '40px', fontSize: '18px' }}>
-                {light.on ? '💡' : '🌑'}
-              </div>
-              <div className="tile-title">{light.name}</div>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: room.on ? '#fff' : '#fff' }}>Master Control</div>
+              <div style={{ fontSize: '14px', opacity: 0.7 }}>Turn everything {room.on ? 'off' : 'on'}</div>
             </div>
+            <HueIcon type="power" size={32} color={room.on ? "#fff" : "rgba(255,255,255,0.3)"} />
+          </div>
 
-            {light.on && (
-              <>
-                <div style={{ position: 'absolute', top: '16px', right: '16px' }}>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onPickColor(light); }}
-                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '6px 12px', borderRadius: '16px', fontSize: '14px', fontWeight: 600 }}
-                  >
-                    Adjust Color
-                  </button>
-                </div>
-                <div 
-                  className="hue-slider-container" 
-                  style={{ position: 'absolute', bottom: '16px', left: '16px', right: '16px' }}
-                  onClick={(e) => e.stopPropagation()}
+          {/* Individual Light Cards */}
+          {lights.map((light) => (
+            <div key={light.id} style={{ position: 'relative' }}>
+              <LightCard 
+                id={light.id}
+                name={light.name}
+                isOn={light.on}
+                brightness={light.brightness}
+                onToggle={() => handleLightToggle(light.id)}
+                onBrightnessChange={handleBrightnessChange}
+              />
+              
+              {/* Color Picker Shortcut - Only visible when light is on */}
+              {light.on && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onPickColor(light); }}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    zIndex: 20,
+                    background: 'rgba(255,255,255,0.15)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '12px',
+                    backdropFilter: 'blur(4px)'
+                  }}
                 >
-                  <div className="hue-slider-fill" style={{ width: `${light.brightness}%` }} />
-                  <input 
-                    type="range"
-                    className="hue-slider-input"
-                    min="1"
-                    max="100"
-                    value={light.brightness}
-                    onChange={(e) => handleBrightnessChange(light.id, Number(e.target.value))}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-        ))}
-
-        {/* Room Master Control Tile */}
-        <div 
-          className="hue-tile active"
-          style={{ gridColumn: 'span 2', background: 'var(--accent-hue)', border: 'none', color: '#000', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: '80px', padding: '20px 24px' }}
-          onClick={handleToggleRoom}
-        >
-          <div>
-            <div className="tile-title" style={{ color: '#000', fontSize: '22px', marginBottom: '2px' }}>Master Control</div>
-            <div className="tile-subtitle" style={{ color: 'rgba(0,0,0,0.6)', fontSize: '16px' }}>Turn everything {room.on ? 'off' : 'on'}</div>
-          </div>
-          <div style={{ fontSize: '36px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.2))' }}>{room.on ? '⭕' : '🔘'}</div>
+                  🎨
+                </button>
+              )}
+            </div>
+          ))}
         </div>
+
+        {/* Right Safe Zone for Dial (80px) */}
+        <div style={{ width: '80px', flexShrink: 0 }} />
       </div>
     </div>
   )

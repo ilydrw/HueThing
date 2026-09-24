@@ -26,8 +26,22 @@ dist-ssr
 huething/
 huething.zip
 build-output.txt
+build-error.log
+build-log.txt
 server-check.txt
+dev-output.log
+debug.log
+
+# Dev/test artifacts
 test-discovery.js
+test-discovery.cjs
+test-startup.mjs
+finalize.js
+old_pairing.txt
+recovered_css_chunk.txt
+
+# Local database
+deskthing/
 
 # env
 .env

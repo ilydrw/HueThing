@@ -48,7 +48,7 @@ export default function ScenePicker({ room, scenes, rooms, onBack, onRoomChange 
               borderRadius: '20px',
               border: 'none',
               background: r.id === room.id ? 'var(--accent-hue)' : 'var(--bg-surface)',
-              color: r.id === room.id ? '#000' : '#fff',
+              color: r.id === room.id ? '#1a1a1b' : '#fff',
               fontWeight: '700',
               whiteSpace: 'nowrap'
             }}

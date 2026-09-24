@@ -1,279 +1,281 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { DeskThingClass } from '@deskthing/client'
-import { HueState, SimplifiedRoom, SimplifiedLight } from './types'
-import Dashboard from './components/Dashboard'
-import LightControl from './components/LightControl'
-import ScenePicker from './components/ScenePicker'
-import PairingFlow from './components/PairingFlow'
-import ColorPicker from './components/ColorPicker'
-import { HueIcon } from './components/HueIcons'
-import { Logo } from './components/Logo'
-import SplashScreen from './components/SplashScreen'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { HardwareInputPayload } from '../shared/messages';
+import { EMPTY_HUE_STATE } from './types';
+import Dashboard from './components/Dashboard';
+import PairingFlow from './components/PairingFlow';
+import RoomPageView from './components/RoomPageView';
+import ColorPicker from './components/ColorPicker';
+import SplashScreen from './components/SplashScreen';
+import SyncDashboard from './components/SyncDashboard';
+import { useHueStoreActions, useHueStoreState } from './state';
+import { isHuePreview } from './dev/previewState';
+import { subscribeHueServerMessage } from './lib/deskthingClient';
+import AppShell from './app/AppShell';
+import { homeRoute, roomRoute, type AppRoute } from './app/navigation';
 
-type View = 'dashboard' | 'lights' | 'scenes' | 'pairing'
+type HomeFocus = {
+  section: 'all' | 'room' | 'scene';
+  index: number;
+};
 
-const deskthing = DeskThingClass.getInstance()
+type RoomFocus = {
+  section: 'master' | 'light';
+  index: number;
+};
+
+const PREVIEW_INPUTS: Record<string, HardwareInputPayload['mode']> = {
+  ArrowUp: 'scrollUp',
+  ArrowRight: 'scrollUp',
+  ArrowDown: 'scrollDown',
+  ArrowLeft: 'scrollDown',
+  Enter: 'pressShort',
+  ' ': 'pressShort',
+  Escape: 'pressLong'
+};
+
+function wrapIndex(index: number, length: number) {
+  if (length <= 0) return 0;
+  return (index + length) % length;
+}
 
 export default function App() {
-  const [hueState, setHueState] = useState<HueState>({
-    connected: false,
-    paired: false,
-    bridgeIp: '',
-    lights: [],
-    rooms: [],
-    scenes: []
-  })
+  const { hueState, syncAreas } = useHueStoreState();
+  const hueActions = useHueStoreActions();
+  const [view, setView] = useState<'dashboard' | 'pairing' | 'room' | 'splash'>(() => isHuePreview() ? 'dashboard' : 'splash');
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedLightId, setSelectedLightId] = useState<string | null>(null);
+  const [route, setRoute] = useState<AppRoute>(homeRoute);
+  const [hardwareInput, setHardwareInput] = useState<HardwareInputPayload | null>(null);
+  const processedHardwareInput = useRef<HardwareInputPayload | null>(null);
+  const [homeFocus, setHomeFocus] = useState<HomeFocus>({ section: 'all', index: 0 });
+  const [roomFocus, setRoomFocus] = useState<RoomFocus>({ section: 'master', index: 0 });
 
-  const [view, setView] = useState<View>('dashboard')
-  const [selectedRoom, setSelectedRoom] = useState<SimplifiedRoom | null>(null)
-  const [pickingColorLight, setPickingColorLight] = useState<SimplifiedLight | null>(null)
-  const [knobBrightness, setKnobBrightness] = useState<number | null>(null)
-  const [themeColor, setThemeColor] = useState<string>('#bf5af2')
-  const [isSpawning, setIsSpawning] = useState<boolean>(true)
-  const knobTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  
-  // Refs to avoid closure staleness in event listeners
-  const selectedRoomRef = useRef<SimplifiedRoom | null>(null)
-  const knobStepRef = useRef<number>(5)
+  const activeHueState = useMemo(() => hueState || EMPTY_HUE_STATE, [hueState]);
+  const homeRooms = useMemo(
+    () => [...activeHueState.rooms].sort((a, b) => Number(b.on) - Number(a.on)),
+    [activeHueState.rooms]
+  );
+  const homeScenes = useMemo(() => activeHueState.scenes.slice(0, 12), [activeHueState.scenes]);
+  const selectedRoom = useMemo(
+    () => activeHueState.rooms.find((room) => room.id === selectedRoomId) ?? null,
+    [activeHueState.rooms, selectedRoomId]
+  );
+  const roomLights = useMemo(
+    () => selectedRoom ? activeHueState.lights.filter((light) => selectedRoom.lightIds.includes(light.id)) : [],
+    [activeHueState.lights, selectedRoom]
+  );
+  const selectedLight = useMemo(
+    () => activeHueState.lights.find((light) => light.id === selectedLightId) ?? null,
+    [activeHueState.lights, selectedLightId]
+  );
 
-  // Sync refs with state
+  const navigate = useCallback((nextRoute: AppRoute) => {
+    setSelectedLightId(null);
+    if (nextRoute.surface === 'room' && nextRoute.roomId) {
+      setSelectedRoomId(nextRoute.roomId);
+      setRoomFocus({ section: 'master', index: 0 });
+      setView('room');
+    } else {
+      setSelectedRoomId(null);
+      setView('dashboard');
+    }
+    setRoute(nextRoute);
+  }, []);
+
+  const handleSplashComplete = () => {
+    if (hueState && !hueState.paired && !hueState.connected) {
+      setView('pairing');
+    } else {
+      navigate(homeRoute());
+    }
+  };
+
   useEffect(() => {
-    selectedRoomRef.current = selectedRoom
-  }, [selectedRoom])
+    if (selectedRoomId && !selectedRoom) {
+      navigate(homeRoute());
+    }
+  }, [navigate, selectedRoom, selectedRoomId]);
 
-  // Listen for state updates from server
   useEffect(() => {
-    const removeHueState = deskthing.on('hueState', (data: any) => {
-      if (data?.payload) {
-        setHueState(data.payload as HueState)
+    if (selectedLightId && !selectedLight) {
+      setSelectedLightId(null);
+    }
+  }, [selectedLight, selectedLightId]);
 
-        // Auto-redirect to pairing if not paired
-        if (!data.payload.paired && !data.payload.connected) {
-          setView('pairing')
-        }
+  useEffect(() => {
+    if (isHuePreview()) {
+      const handlePreviewKey = (event: KeyboardEvent) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.tagName === 'INPUT') return;
 
-        // Update selected room if it exists
-        if (selectedRoom) {
-          const updatedRoom = (data.payload as HueState).rooms.find(r => r.id === selectedRoom.id)
-          if (updatedRoom) setSelectedRoom(updatedRoom)
+        const mode = PREVIEW_INPUTS[event.key];
+        if (!mode) return;
+
+        event.preventDefault();
+        setHardwareInput({ keyId: 'preview', mode });
+      };
+
+      window.addEventListener('keydown', handlePreviewKey);
+      return () => window.removeEventListener('keydown', handlePreviewKey);
+    }
+
+    return subscribeHueServerMessage('hardwareInput', setHardwareInput);
+  }, []);
+
+  const homeFocusItems = useMemo(
+    () => [
+      { section: 'all' as const, index: 0 },
+      ...homeRooms.map((_, index) => ({ section: 'room' as const, index })),
+      ...homeScenes.map((_, index) => ({ section: 'scene' as const, index }))
+    ],
+    [homeRooms, homeScenes]
+  );
+
+  const roomFocusItems = useMemo(
+    () => [
+      { section: 'master' as const, index: 0 },
+      ...roomLights.map((_, index) => ({ section: 'light' as const, index }))
+    ],
+    [roomLights]
+  );
+
+  const handleHardwareInput = useCallback((input: HardwareInputPayload) => {
+    if (view === 'splash' || view === 'pairing' || selectedLightId) return;
+
+    if (route.surface === 'home') {
+      if (input.mode === 'scrollUp' || input.mode === 'scrollDown') {
+        const currentIndex = homeFocusItems.findIndex((item) => (
+          item.section === homeFocus.section && item.index === homeFocus.index
+        ));
+        const nextIndex = wrapIndex(currentIndex + (input.mode === 'scrollUp' ? -1 : 1), homeFocusItems.length);
+        setHomeFocus(homeFocusItems[nextIndex] || { section: 'all', index: 0 });
+        return;
+      }
+
+      if (input.mode === 'pressShort') {
+        if (homeFocus.section === 'all') {
+          hueActions.toggleAllLights();
+        } else if (homeFocus.section === 'room') {
+          const room = homeRooms[homeFocus.index];
+          if (room) navigate(roomRoute(room.id));
+        } else {
+          const scene = homeScenes[homeFocus.index];
+          if (scene) hueActions.activateScene(scene.id);
         }
       }
-    })
+      return;
+    }
 
-    // Listen for brightness feedback from server (knob turns)
-    const removeBrightness = deskthing.on('hueBrightness', (data: any) => {
-      if (data?.payload?.brightness !== undefined) {
-        setKnobBrightness(Math.round(data.payload.brightness))
-        // Auto-hide the indicator after 1.5 seconds
-        if (knobTimeoutRef.current) clearTimeout(knobTimeoutRef.current)
-        knobTimeoutRef.current = setTimeout(() => setKnobBrightness(null), 1500)
-      }
-    })
+    if (route.surface === 'sync') {
+      if (input.mode === 'pressLong') navigate(homeRoute());
+      return;
+    }
 
-    // Listen for Car Thing knob scroll events (volume knob → brightness)
-    const removeScrollUp = deskthing.on('scrollUp' as any, () => {
-      deskthing.send({
-        type: 'brightnessUp',
-        payload: { roomId: selectedRoomRef.current?.id }
-      })
-    })
+    if (!selectedRoom) return;
 
-    const removeScrollDown = deskthing.on('scrollDown' as any, () => {
-      deskthing.send({
-        type: 'brightnessDown',
-        payload: { roomId: selectedRoomRef.current?.id }
-      })
-    })
+    if (input.mode === 'pressLong') {
+      const currentIndex = roomFocusItems.findIndex((item) => (
+        item.section === roomFocus.section && item.index === roomFocus.index
+      ));
+      const nextIndex = wrapIndex(currentIndex + 1, roomFocusItems.length);
+      setRoomFocus(roomFocusItems[nextIndex] || { section: 'master', index: 0 });
+      return;
+    }
 
-    // Knob press → toggle all lights
-    const removeKnobPress = deskthing.on('pressShort' as any, () => {
-      deskthing.send({ type: 'knobPress' })
-    })
-
-    // Also handle wheel events for browser testing
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      if (e.deltaY < 0) {
-        deskthing.send({ type: 'brightnessUp', payload: { roomId: selectedRoomRef.current?.id } })
+    if (input.mode === 'pressShort') {
+      if (roomFocus.section === 'master') {
+        hueActions.toggleRoom(selectedRoom);
       } else {
-        deskthing.send({ type: 'brightnessDown', payload: { roomId: selectedRoomRef.current?.id } })
+        const light = roomLights[roomFocus.index];
+        if (light) hueActions.toggleLight(light);
+      }
+      return;
+    }
+
+    if (input.mode === 'scrollUp' || input.mode === 'scrollDown') {
+      const delta = (input.step || 5) * (input.mode === 'scrollUp' ? 1 : -1);
+      if (roomFocus.section === 'master') {
+        const nextBrightness = Math.max(1, Math.min(100, selectedRoom.brightness + delta));
+        hueActions.setRoomState({ roomId: selectedRoom.id, brightness: nextBrightness, on: true });
+      } else {
+        const light = roomLights[roomFocus.index];
+        if (!light) return;
+        const nextBrightness = Math.max(1, Math.min(100, light.brightness + delta));
+        hueActions.setLightState({ lightId: light.id, brightness: nextBrightness, on: true });
       }
     }
-    window.addEventListener('wheel', handleWheel, { passive: false })
+  }, [homeFocus, homeFocusItems, homeRooms, homeScenes, hueActions, navigate, roomFocus, roomFocusItems, roomLights, route.surface, selectedLightId, selectedRoom, view]);
 
-    // Listen to settings for theme change
-    const removeSettings = deskthing.on('settings', (data: any) => {
-      if (data?.payload?.themeColor?.value) {
-        setThemeColor(data.payload.themeColor.value as string)
-      }
-      if (data?.payload?.knobStep?.value) {
-        knobStepRef.current = Number(data.payload.knobStep.value)
-      }
-    })
+  useEffect(() => {
+    if (!hardwareInput || processedHardwareInput.current === hardwareInput) return;
+    processedHardwareInput.current = hardwareInput;
+    handleHardwareInput(hardwareInput);
+  }, [handleHardwareInput, hardwareInput]);
 
-    // Request initial state and settings
-    deskthing.send({ type: 'getState' })
-    deskthing.send({ type: 'getSettings' })
-
-    return () => {
-      removeHueState()
-      removeBrightness()
-      removeScrollUp()
-      removeScrollDown()
-      removeKnobPress()
-      removeSettings()
-      window.removeEventListener('wheel', handleWheel)
-      if (knobTimeoutRef.current) clearTimeout(knobTimeoutRef.current)
-    }
-  }, [])
-
-  const handleRoomSelect = useCallback((room: SimplifiedRoom) => {
-    setSelectedRoom(room)
-    setView('lights')
-  }, [])
-
-  const handleBack = useCallback(() => {
-    setView('dashboard')
-    setSelectedRoom(null)
-  }, [])
-
-  const handlePaired = useCallback(() => {
-    setView('dashboard')
-  }, [])
-
-  const handlePickColor = useCallback((light: SimplifiedLight) => {
-    setPickingColorLight(light)
-  }, [])
-
-  const handleViewScenes = useCallback((room: SimplifiedRoom) => {
-    setSelectedRoom(room)
-    setView('scenes')
-  }, [])
-
-  const needsPairing = !hueState.paired && !hueState.connected
+  const focusedRoomId = homeFocus.section === 'room' ? homeRooms[homeFocus.index]?.id || null : null;
+  const focusedSceneId = homeFocus.section === 'scene' ? homeScenes[homeFocus.index]?.id || null : null;
+  const focusedLightId = roomFocus.section === 'light' ? roomLights[roomFocus.index]?.id || null : null;
 
   return (
-    <>
-      <div className="app-container" style={{ '--accent-hue': themeColor } as React.CSSProperties}>
-        {/* Header */}
-      <header className="app-header">
-        <div className="header-left">
-          <Logo />
-        </div>
-        {!needsPairing && (
-          <div className="header-status">
-            <span className={`status-dot ${hueState.connected ? '' : 'disconnected'}`} />
-            {hueState.connected ? `${hueState.lights.length} Lights` : 'Offline'}
-          </div>
-        )}
-      </header>
-
-      {!needsPairing && (
-        <nav className="nav-bar">
-          <button
-            className={`nav-item ${view === 'dashboard' ? 'active' : ''}`}
-            onClick={() => { setView('dashboard'); setSelectedRoom(null) }}
-          >
-            <span className="nav-item-icon">
-              <HueIcon type="room" size={32} color={view === 'dashboard' ? 'var(--accent-hue)' : 'var(--text-muted)'} />
-            </span>
-            <span className="nav-item-label">Rooms</span>
-          </button>
-          <button
-            className={`nav-item ${view === 'lights' ? 'active' : ''}`}
-            onClick={() => {
-              if (!selectedRoom && hueState.rooms.length > 0) {
-                setSelectedRoom(hueState.rooms[0])
-              }
-              setView('lights')
-            }}
-          >
-            <span className="nav-item-icon">
-              <HueIcon type="bulb" size={32} color={view === 'lights' ? 'var(--accent-hue)' : 'var(--text-muted)'} />
-            </span>
-            <span className="nav-item-label">Lights</span>
-          </button>
-          <button
-            className={`nav-item ${view === 'scenes' ? 'active' : ''}`}
-            onClick={() => {
-              if (!selectedRoom && hueState.rooms.length > 0) {
-                setSelectedRoom(hueState.rooms[0])
-              }
-              setView('scenes')
-            }}
-          >
-            <span className="nav-item-icon">
-              <HueIcon type="filament" size={32} color={view === 'scenes' ? 'var(--accent-hue)' : 'var(--text-muted)'} />
-            </span>
-            <span className="nav-item-label">Scenes</span>
-          </button>
-          <button
-            className={`nav-item ${view === 'pairing' ? 'active' : ''}`}
-            onClick={() => setView('pairing')}
-          >
-            <span className="nav-item-icon">
-              <HueIcon type="group" size={32} color={view === 'pairing' ? 'var(--accent-hue)' : 'var(--text-muted)'} />
-            </span>
-            <span className="nav-item-label">Setup</span>
-          </button>
-        </nav>
-      )}
-
-      {/* Content */}
-      <div className="app-content">
-        {needsPairing || view === 'pairing' ? (
-          <PairingFlow
-            hueState={hueState}
-            onPaired={handlePaired}
-          />
-        ) : view === 'dashboard' ? (
-          <Dashboard
-            hueState={hueState}
-            onRoomSelect={handleRoomSelect}
-            onViewScenes={handleViewScenes}
-          />
-        ) : view === 'lights' && selectedRoom ? (
-          <LightControl
-            room={selectedRoom}
-            lights={hueState.lights.filter(l => selectedRoom.lightIds.includes(l.id))}
-            onBack={handleBack}
-            onPickColor={handlePickColor}
-          />
-        ) : view === 'scenes' && selectedRoom ? (
-          <ScenePicker
-            room={selectedRoom}
-            scenes={hueState.scenes.filter(s => s.roomId === selectedRoom.id)}
-            rooms={hueState.rooms}
-            onBack={handleBack}
-            onRoomChange={(room) => setSelectedRoom(room)}
-          />
-        ) : (
-          <Dashboard
-            hueState={hueState}
-            onRoomSelect={handleRoomSelect}
-            onViewScenes={handleViewScenes}
-          />
-        )}
-      </div>
-
-      {/* Brightness Indicator Overlay — appears when turning the knob */}
-      {knobBrightness !== null && (
-        <div className="knob-overlay">
-          <div className="knob-value">{knobBrightness}%</div>
-          <div className="knob-label">Brightness</div>
+    <div className="app-container">
+      {view === 'splash' ? (
+        <SplashScreen onComplete={handleSplashComplete} />
+      ) : (
+        <div className="view-layer fade-in">
+          {view === 'pairing' || (!activeHueState.paired && !activeHueState.connected) ? (
+            <PairingFlow
+              hueState={activeHueState}
+              onPaired={() => navigate(homeRoute())}
+            />
+          ) : (
+            <AppShell
+              route={route}
+              connected={activeHueState.connected}
+              bridgeLabel={activeHueState.bridgeName || activeHueState.bridgeIp}
+              onNavigate={navigate}
+            >
+              {route.surface === 'sync' ? (
+                <SyncDashboard entertainmentAreas={syncAreas} />
+              ) : view === 'room' && selectedRoom ? (
+                <RoomPageView
+                  room={selectedRoom}
+                  lights={roomLights}
+                  scenes={activeHueState.scenes.filter((scene) => scene.roomId === selectedRoom.id)}
+                  actions={hueActions}
+                  onBack={() => navigate(homeRoute())}
+                  onPickColor={(light) => {
+                    setHardwareInput(null);
+                    setSelectedLightId(light.id);
+                  }}
+                  isMasterFocused={roomFocus.section === 'master'}
+                  focusedLightId={focusedLightId}
+                />
+              ) : (
+                <Dashboard
+                  hueState={activeHueState}
+                  focusedRoomId={focusedRoomId}
+                  focusedSceneId={focusedSceneId}
+                  isAllLightsFocused={homeFocus.section === 'all'}
+                  actions={hueActions}
+                  onFocusRoom={(id) => {
+                    const room = activeHueState.rooms.find((candidate) => candidate.id === id);
+                    if (room) navigate(roomRoute(room.id));
+                  }}
+                  greeting=""
+                />
+              )}
+            </AppShell>
+          )}
         </div>
       )}
 
-      {/* Color Picker Full Screen Overlay */}
-      {pickingColorLight && (
+      {selectedLight && (
         <ColorPicker
-          light={pickingColorLight}
-          onClose={() => setPickingColorLight(null)}
+          light={selectedLight}
+          hardwareInput={hardwareInput}
+          onClose={() => setSelectedLightId(null)}
         />
       )}
-      </div>
-
-      {isSpawning && <SplashScreen onComplete={() => setIsSpawning(false)} />}
-    </>
-  )
+    </div>
+  );
 }
